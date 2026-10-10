@@ -1,7 +1,7 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import {
-  type BufferGeometry,
+  BufferGeometry,
   Color,
   DoubleSide,
   Float32BufferAttribute,
@@ -16,33 +16,18 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { ctl } from "../game";
 import { ball, merge, part } from "./clay";
 import { OVERLAY } from "./minimap";
-import { COAST_GLSL, R, SEA_LEVEL, frameAt, seaUniform, toward } from "./planet";
+import { COAST_GLSL, R, SEA_LEVEL, coast, frameAt, seaUniform, toward } from "./planet";
 import { rng, scatter } from "./props";
 import { newLook, skyNow } from "./sky";
-import { SURFACE_UNIFORMS } from "./surface";
+import { NOISE_GLSL, SURFACE_UNIFORMS } from "./surface";
 
-const NOISE = /* glsl */ `
-float eh(vec3 p) {
-  p = fract(p * 0.3183099 + 0.1) * 17.0;
-  return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
-}
-float en(vec3 x) {
-  vec3 i = floor(x);
-  vec3 f = fract(x);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(
-    mix(mix(eh(i), eh(i + vec3(1, 0, 0)), f.x), mix(eh(i + vec3(0, 1, 0)), eh(i + vec3(1, 1, 0)), f.x), f.y),
-    mix(mix(eh(i + vec3(0, 0, 1)), eh(i + vec3(1, 0, 1)), f.x), mix(eh(i + vec3(0, 1, 1)), eh(i + vec3(1, 1, 1)), f.x), f.y),
-    f.z);
-}
-`;
 
 const ocean = new MeshStandardMaterial({ color: "#ffffff", roughness: 0.16, metalness: 0, transparent: true });
 ocean.onBeforeCompile = (shader) => {
   Object.assign(shader.uniforms, SURFACE_UNIFORMS, { uSeas: seaUniform() });
   shader.vertexShader =
     "varying vec3 vDir;\n" + shader.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\nvDir = normalize(position);");
-  shader.fragmentShader = `uniform float uTime;\nuniform float uNight;\nvarying vec3 vDir;\n${COAST_GLSL}${NOISE}${shader.fragmentShader}`
+  shader.fragmentShader = `uniform float uTime;\nuniform float uNight;\nvarying vec3 vDir;\n${COAST_GLSL}${NOISE_GLSL}${shader.fragmentShader}`
     .replace(
       "#include <color_fragment>",
       /* glsl */ `#include <color_fragment>
@@ -50,7 +35,7 @@ ocean.onBeforeCompile = (shader) => {
       float depth = ${SEA_LEVEL.toFixed(3)} - seabed(k);
       if (depth < -0.03) discard;
       vec3 q = vDir * ${R.toFixed(1)};
-      float rip = en(q * 2.4 + vec3(uTime * 0.3, 0.0, uTime * 0.22)) * 0.6 + en(q * 5.3 - vec3(0.0, uTime * 0.4, uTime * 0.33)) * 0.4;
+      float rip = vnoise(q * 2.4 + vec3(uTime * 0.3, 0.0, uTime * 0.22)) * 0.6 + vnoise(q * 5.3 - vec3(0.0, uTime * 0.4, uTime * 0.33)) * 0.4;
       // the waterline itself, then swells rolling in toward it
       float edge = 1.0 - smoothstep(0.0, 0.12, depth + (rip - 0.5) * 0.06);
       float swell = smoothstep(0.72, 0.92, sin(depth * 26.0 - uTime * 1.6 + rip * 2.5) * 0.5 + 0.5) * (1.0 - smoothstep(0.08, 0.38, depth));
@@ -78,6 +63,23 @@ ocean.onBeforeCompile = (shader) => {
       totalEmissiveRadiance += vec3(0.85, 0.95, 1.0) * smoothstep(0.8, 0.95, rip) * (1.0 - foam) * mix(0.35, 0.08, uNight);`,
     );
 };
+
+/** The water sphere cut down to the triangles over a sea, so dry land costs no water shading and the shader's discard only trims the shore. */
+function seaSurface(): BufferGeometry {
+  const g = new IcosahedronGeometry(R + SEA_LEVEL, 36).deleteAttribute("uv");
+  const pos = g.getAttribute("position");
+  const v = new Vector3();
+  const keep: number[] = [];
+  for (let i = 0; i < pos.count; i += 3) {
+    let wet = false;
+    for (let k = 0; k < 3 && !wet; k++) wet = coast(v.fromBufferAttribute(pos, i + k).normalize()) > -0.6;
+    if (wet) for (let k = 0; k < 9; k++) keep.push(pos.array[i * 3 + k]);
+  }
+  const out = new BufferGeometry().setAttribute("position", new Float32BufferAttribute(keep, 3));
+  out.computeVertexNormals();
+  g.dispose();
+  return out;
+}
 
 /** How far the air reaches above the ground; the glow fades to nothing there. */
 const SHELL = R + 2.6;
@@ -150,7 +152,7 @@ function clouds(seed: number, count: number, polar: [number, number], size: numb
     const parts = Array.from({ length: puffs }, (_, i) => {
       const x = (i / (puffs - 1) - 0.5) * 1.6 * s;
       const r = (1 - Math.abs(x / s) * 0.6) * (0.75 + rand() * 0.35) * s;
-      return part(ball(0.5, 14, 10), [x, r * 0.15, (rand() - 0.5) * 0.4 * s], { scale: [r, r * 0.62, r * 0.85] });
+      return part(ball(0.5, 10, 7), [x, r * 0.15, (rand() - 0.5) * 0.4 * s], { scale: [r, r * 0.62, r * 0.85] });
     });
     const g = merge(parts).applyMatrix4(frameAt(n, toward(n, scatter(rand, new Vector3()), new Vector3()), m, up));
     const c = n.clone().multiplyScalar(R + up);
@@ -170,7 +172,7 @@ const look = newLook();
 
 /** Oceans, the glow of the air at the planet's rim, and drifting clouds. */
 export function Earth() {
-  const sea = useMemo(() => new IcosahedronGeometry(R + SEA_LEVEL, 36), []);
+  const sea = useMemo(() => seaSurface(), []);
   const shell = useMemo(() => new IcosahedronGeometry(SHELL, 12), []);
   const high = useMemo(() => clouds(11, 7, [50, 58], 0.75, [2.2, 2.7]), []);
   const low = useMemo(() => clouds(23, 14, [82, 150], 1.05, [1.8, 3.2]), []);

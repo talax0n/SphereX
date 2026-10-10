@@ -43,10 +43,10 @@ const broadleaf = (rand: () => number, s: number): Part[] => {
   const tone = rand() < 0.12 ? pick(rand, PAL.autumn) : pick(rand, PAL.leaf);
   return [
     part(cyl(0.06, 0.09, 0.5), [0, 0.25 * s, 0], { scale: [s, s, s], tone: PAL.trunk, surf: "bark" }),
-    part(ball(0.3), [0, 0.72 * s, 0], { scale: [1.2 * s, 1.1 * s, 1.2 * s], ...leaf(tone) }),
-    part(ball(0.3), [0.17 * s, 0.6 * s, 0.08 * s], { scale: [0.75 * s, 0.7 * s, 0.75 * s], ...leaf(tone) }),
-    part(ball(0.3), [-0.15 * s, 0.63 * s, -0.1 * s], { scale: [0.7 * s, 0.68 * s, 0.7 * s], ...leaf(tone) }),
-    part(ball(0.3), [0.03 * s, 0.93 * s, 0], { scale: [0.62 * s, 0.6 * s, 0.62 * s], ...leaf(tone) }),
+    part(ball(0.3, 10, 7), [0, 0.72 * s, 0], { scale: [1.2 * s, 1.1 * s, 1.2 * s], ...leaf(tone) }),
+    part(ball(0.3, 10, 7), [0.17 * s, 0.6 * s, 0.08 * s], { scale: [0.75 * s, 0.7 * s, 0.75 * s], ...leaf(tone) }),
+    part(ball(0.3, 10, 7), [-0.15 * s, 0.63 * s, -0.1 * s], { scale: [0.7 * s, 0.68 * s, 0.7 * s], ...leaf(tone) }),
+    part(ball(0.3, 10, 7), [0.03 * s, 0.93 * s, 0], { scale: [0.62 * s, 0.6 * s, 0.62 * s], ...leaf(tone) }),
   ];
 };
 
@@ -63,9 +63,9 @@ const pine = (rand: () => number, s: number): Part[] => {
 const bush = (rand: () => number, s: number): Part[] => {
   const tone = pick(rand, PAL.leaf);
   return [
-    part(ball(0.3), [0, 0.13 * s, 0], { scale: [0.95 * s, 0.75 * s, 0.95 * s], ...leaf(tone) }),
-    part(ball(0.3), [0.2 * s, 0.09 * s, 0.06 * s], { scale: [0.6 * s, 0.5 * s, 0.6 * s], ...leaf(tone) }),
-    part(ball(0.3), [-0.17 * s, 0.09 * s, -0.08 * s], { scale: [0.65 * s, 0.55 * s, 0.65 * s], ...leaf(tone) }),
+    part(ball(0.3, 10, 7), [0, 0.13 * s, 0], { scale: [0.95 * s, 0.75 * s, 0.95 * s], ...leaf(tone) }),
+    part(ball(0.3, 10, 7), [0.2 * s, 0.09 * s, 0.06 * s], { scale: [0.6 * s, 0.5 * s, 0.6 * s], ...leaf(tone) }),
+    part(ball(0.3, 10, 7), [-0.17 * s, 0.09 * s, -0.08 * s], { scale: [0.65 * s, 0.55 * s, 0.65 * s], ...leaf(tone) }),
   ];
 };
 
@@ -336,7 +336,7 @@ function meadow(g: BufferGeometry): BufferGeometry {
 
 /** The planet's crust, fine enough to draw coastlines: meadow, a sandy shelf, then the seabed under each sea. */
 function terrain(): BufferGeometry {
-  const g = mergeVertices(new IcosahedronGeometry(R, 40).deleteAttribute("normal").deleteAttribute("uv"));
+  const g = mergeVertices(new IcosahedronGeometry(R, 30).deleteAttribute("normal").deleteAttribute("uv"));
   const p = g.getAttribute("position");
   const v = new Vector3();
   for (let i = 0; i < p.count; i++) {

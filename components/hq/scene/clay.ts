@@ -94,13 +94,21 @@ function shared(key: string, make: () => BufferGeometry) {
   return g;
 }
 
-// Rounded boxes stay at smoothness 2, props' spheres at 12 segments.
+// Detail follows size: a rounded corner under ~1cm or a curve a few pixels across never shows its segments,
+// and the minimap draws every triangle a second time.
+/** Rounded boxes at smoothness 2 (300 triangles), square ones (12) once the corner is too small to see. */
 export const box = (w: number, h: number, d: number, r = 0.05) =>
-  shared(`b${w},${h},${d},${r}`, () => new RoundedBoxGeometry(w, h, d, 2, Math.min(r, w / 2, h / 2, d / 2)));
-export const ball = (r: number, w = 12, h = 9) => shared(`s${r},${w},${h}`, () => new SphereGeometry(r, w, h));
+  shared(`b${w},${h},${d},${r}`, () => {
+    const c = Math.min(r, w / 2, h / 2, d / 2);
+    return c < 0.012 ? new BoxGeometry(w, h, d) : new RoundedBoxGeometry(w, h, d, 2, c);
+  });
+/** Segments for a curve of radius r: the full count from 0.2 up, half that for the smallest bits. */
+const round = (r: number, n: number, min: number) => Math.max(min, Math.round(n * Math.min(1, Math.max(0.5, r / 0.2))));
+export const ball = (r: number, w = 12, h = 9) =>
+  shared(`s${r},${w},${h}`, () => new SphereGeometry(r, round(r, w, 6), round(r, h, 4)));
 export const cyl = (rt: number, rb: number, h: number) =>
-  shared(`c${rt},${rb},${h}`, () => new CylinderGeometry(rt, rb, h, 14));
-export const cone = (r: number, h: number) => shared(`n${r},${h}`, () => new ConeGeometry(r, h, 14));
+  shared(`c${rt},${rb},${h}`, () => new CylinderGeometry(rt, rb, h, round(Math.max(rt, rb), 14, 6)));
+export const cone = (r: number, h: number) => shared(`n${r},${h}`, () => new ConeGeometry(r, h, round(r, 12, 6)));
 export const ring = (r: number, tube: number, rad = 8, seg = 18) =>
   shared(`t${r},${tube},${rad},${seg}`, () => new TorusGeometry(r, tube, rad, seg));
 export const pill = (r: number, len: number, cap = 4, rad = 10) =>

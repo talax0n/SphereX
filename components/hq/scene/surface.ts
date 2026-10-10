@@ -1,4 +1,4 @@
-import type { MeshStandardMaterial } from "three";
+import { DataTexture, LinearFilter, type MeshStandardMaterial, RepeatWrapping } from "three";
 
 /**
  * What a piece of clay is made of. Baked per vertex as the `surf` attribute, so one material and
@@ -23,12 +23,48 @@ export const SURF = {
 } as const;
 export type Surf = keyof typeof SURF;
 
-/** Shared by every clay material: the scene clock for water, 0 day … 1 night for lit windows, and the planet radius. */
+const NOISE = 256;
+/**
+ * Value noise as a texture: red is random per texel, green is red 37 and 17 texels on, so one
+ * bilinear read returns two neighbouring z-slices of 3D noise. It replaces eight hashes per sample.
+ */
+function noiseTexture(): DataTexture {
+  let seed = 7;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+  const r = Array.from({ length: NOISE * NOISE }, () => Math.floor(rand() * 256));
+  const data = new Uint8Array(NOISE * NOISE * 4);
+  for (let y = 0; y < NOISE; y++)
+    for (let x = 0; x < NOISE; x++) {
+      const i = (y * NOISE + x) * 4;
+      data[i] = r[y * NOISE + x];
+      data[i + 1] = r[((y + 17) % NOISE) * NOISE + ((x + 37) % NOISE)];
+    }
+  const t = new DataTexture(data, NOISE, NOISE);
+  t.wrapS = t.wrapT = RepeatWrapping;
+  t.magFilter = t.minFilter = LinearFilter;
+  t.needsUpdate = true;
+  return t;
+}
+
+/** Shared by every clay material: the scene clock for water, 0 day … 1 night for lit windows, the planet radius, and the noise. */
 export const SURFACE_UNIFORMS = {
   uTime: { value: 0 },
   uNight: { value: 0 },
   uR: { value: 1 },
+  uNoise: { value: noiseTexture() },
 };
+
+/** 3D value noise from `uNoise`, for any shader that takes `SURFACE_UNIFORMS`. */
+export const NOISE_GLSL = /* glsl */ `
+uniform sampler2D uNoise;
+float vnoise(vec3 x) {
+  vec3 i = floor(x);
+  vec3 f = fract(x);
+  f = f * f * (3.0 - 2.0 * f);
+  vec2 rg = texture(uNoise, (i.xy + vec2(37.0, 17.0) * i.z + f.xy + 0.5) / ${NOISE}.0).rg;
+  return mix(rg.x, rg.y, f.z);
+}
+`;
 
 const VERTEX_HEAD = /* glsl */ `
 attribute float surf;
@@ -56,19 +92,18 @@ float h31(vec3 p) {
   return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
 }
 float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float vnoise(vec3 x) {
-  vec3 i = floor(x);
-  vec3 f = fract(x);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(
-    mix(mix(h31(i), h31(i + vec3(1, 0, 0)), f.x), mix(h31(i + vec3(0, 1, 0)), h31(i + vec3(1, 1, 0)), f.x), f.y),
-    mix(mix(h31(i + vec3(0, 0, 1)), h31(i + vec3(1, 0, 1)), f.x), mix(h31(i + vec3(0, 1, 1)), h31(i + vec3(1, 1, 1)), f.x), f.y),
-    f.z);
-}
-float fbm(vec3 p) {
-  float a = 0.5, s = 0.0;
-  for (int i = 0; i < 4; i++) { s += a * vnoise(p); p = p * 2.03 + 1.7; a *= 0.5; }
-  return s / 0.9375;
+${NOISE_GLSL}/** \`fp\` is the pixel's footprint in p's units: octaves finer than a pixel would only shimmer, so they stop there. */
+float fbm(vec3 p, float fp, int n) {
+  float a = 0.5, s = 0.0, w = 0.0;
+  for (int i = 0; i < 4; i++) {
+    if (i >= n || (i > 0 && fp > 0.6)) break;
+    s += a * vnoise(p);
+    w += a;
+    p = p * 2.03 + 1.7;
+    a *= 0.5;
+    fp *= 2.03;
+  }
+  return s / w;
 }
 /** x: distance to the nearest cell centre, y: gap to the second nearest, z: the cell's hash */
 vec3 cells(vec2 p) {
@@ -107,10 +142,10 @@ Surface surface(vec3 base) {
     float row = floor(uv.y / w);
     float f = fract(uv.y / w);
     float seam = smoothstep(0.0, 0.08, f) * smoothstep(1.0, 0.92, f);
-    float grain = sin((uv.y * 70.0 + fbm(vec3(uv.x * 3.0, uv.y * 40.0, row)) * 7.0)) * 0.5 + 0.5;
+    float grain = sin((uv.y * 70.0 + fbm(vec3(uv.x * 3.0, uv.y * 40.0, row), px * 40.0, 4) * 7.0)) * 0.5 + 0.5;
     float g = keep(0.02, px);
     s.tint = vec3(0.88 + 0.16 * h21(vec2(row, 1.0))) * mix(1.0, 0.82 + 0.18 * grain, g) * mix(0.62, 1.0, mix(1.0, seam, keep(w * 0.2, px)));
-    if (k == 14) s.tint *= 0.85 + 0.2 * fbm(vec3(uv * vec2(3.0, 25.0), 0.0));
+    if (k == 14) s.tint *= 0.85 + 0.2 * fbm(vec3(uv * vec2(3.0, 25.0), 0.0), px * 25.0, 3);
     s.h = seam * 0.6 + grain * 0.25 * g;
     s.rough = k == 14 ? 0.95 : 0.72;
   } else if (k == 2) {
@@ -121,7 +156,7 @@ Surface surface(vec3 base) {
     float m = smoothstep(0.0, 0.07, f.x) * smoothstep(1.0, 0.93, f.x) * smoothstep(0.0, 0.12, f.y) * smoothstep(1.0, 0.88, f.y);
     m = mix(1.0, m, keep(0.03, px));
     float j = h21(floor(b));
-    s.tint = mix(vec3(1.25, 1.2, 1.12), vec3(0.86 + 0.2 * j) * (0.92 + 0.12 * fbm(p * 30.0)), m);
+    s.tint = mix(vec3(1.25, 1.2, 1.12), vec3(0.86 + 0.2 * j) * (0.92 + 0.12 * fbm(p * 30.0, px * 30.0, 4)), m);
     s.h = m;
     s.rough = 0.9;
   } else if (k == 3) {
@@ -139,19 +174,19 @@ Surface surface(vec3 base) {
     // stone: irregular flags with dark joints
     vec3 c = cells(uv * 6.0);
     float edge = mix(1.0, smoothstep(0.02, 0.09, c.y), keep(0.03, px));
-    s.tint = vec3(0.86 + 0.22 * c.z) * mix(0.55, 1.0, edge) * (0.92 + 0.12 * fbm(p * 20.0));
+    s.tint = vec3(0.86 + 0.22 * c.z) * mix(0.55, 1.0, edge) * (0.92 + 0.12 * fbm(p * 20.0, px * 20.0, 4));
     s.h = edge * (1.0 - c.x * 0.6);
     s.rough = 0.92;
   } else if (k == 5) {
     // fabric: a soft weave
     vec2 w = uv * 160.0;
     float weave = (sin(w.x) * sin(w.y) * 0.5 + 0.5) * keep(0.012, px);
-    s.tint = vec3(0.93 + 0.07 * weave) * (0.95 + 0.08 * fbm(p * 8.0));
-    s.h = weave * 0.3 + fbm(p * 6.0) * 0.4;
+    s.tint = vec3(0.93 + 0.07 * weave) * (0.95 + 0.08 * fbm(p * 8.0, px * 8.0, 4));
+    s.h = weave * 0.3 + fbm(p * 6.0, px * 6.0, 4) * 0.4;
     s.rough = 1.0;
   } else if (k == 6) {
     // metal: brushed streaks and a soft sheen
-    float br = fbm(vec3(uv.x * 80.0, uv.y * 3.0, 0.0));
+    float br = fbm(vec3(uv.x * 80.0, uv.y * 3.0, 0.0), px * 80.0, 4);
     s.tint = vec3(0.92 + 0.12 * br * keep(0.01, px));
     s.rough = 0.38;
     s.metal = 0.35;
@@ -165,8 +200,8 @@ Surface surface(vec3 base) {
   } else if (k == 8) {
     // grass: broad meadow patches, clumps and blades, then beach and seabed below sea level
     vec3 q = p / uR;
-    float broad = fbm(q * 3.5);
-    float clump = fbm(p * 2.2);
+    float broad = fbm(q * 3.5, px * 3.5 / uR, 2);
+    float clump = fbm(p * 2.2, px * 2.2, 3);
     float blade = h31(floor(p * 38.0)) * keep(0.03, px);
     vec3 grass = mix(vec3(0.24, 0.55, 0.16), vec3(0.47, 0.69, 0.22), smoothstep(0.3, 0.75, broad));
     grass = mix(grass, vec3(0.11, 0.33, 0.14), smoothstep(0.55, 0.8, clump) * 0.55);
@@ -181,7 +216,7 @@ Surface surface(vec3 base) {
     s.rough = 0.95;
   } else if (k == 9) {
     // foliage: lumpy leaf clusters with shadowed hollows
-    float c = fbm(p * 9.0);
+    float c = fbm(p * 9.0, px * 9.0, 4);
     float leaf = h31(floor(p * 40.0)) * keep(0.025, px);
     s.tint = vec3(0.72 + 0.45 * c) * (0.92 + 0.14 * leaf);
     s.h = c + leaf * 0.3;
@@ -191,29 +226,28 @@ Surface surface(vec3 base) {
     s.rough = 0.4;
   } else if (k == 11) {
     // water: drifting ripples and glints
-    float r = fbm(vec3(p.xz * 5.0, uTime * 0.35));
+    float r = fbm(vec3(p.xz * 5.0, uTime * 0.35), px * 5.0, 4);
     s.tint = vec3(0.9 + 0.25 * r);
     s.h = r;
     s.rough = 0.08;
     s.glow = vec3(0.7, 0.9, 1.0) * smoothstep(0.78, 0.9, r) * 0.2;
   } else if (k == 12) {
     // sand and packed dirt: grit and the odd pebble
-    vec3 c = cells(uv * 14.0);
-    float pebble = smoothstep(0.22, 0.12, c.x) * step(0.82, c.z) * keep(0.03, px);
-    s.tint = vec3(0.92 + 0.12 * h31(floor(p * 60.0)) * keep(0.01, px)) * (0.95 + 0.08 * fbm(p * 4.0)) * (1.0 - pebble * 0.18);
+    float pebble = smoothstep(0.74, 0.8, vnoise(vec3(uv * 14.0, 0.0))) * keep(0.03, px);
+    s.tint = vec3(0.92 + 0.12 * h31(floor(p * 60.0)) * keep(0.01, px)) * (0.95 + 0.08 * fbm(p * 4.0, px * 4.0, 4)) * (1.0 - pebble * 0.18);
     s.h = pebble;
     s.rough = 0.97;
   } else if (k == 13) {
     // plaster: hand-trowelled render
-    float t = fbm(p * 7.0);
+    float t = fbm(p * 7.0, px * 7.0, 4);
     s.tint = vec3(0.95 + 0.08 * t);
-    s.h = t * 0.7 + fbm(p * 30.0) * 0.3 * keep(0.02, px);
+    s.h = t * 0.7 + fbm(p * 30.0, px * 30.0, 4) * 0.3 * keep(0.02, px);
     s.rough = 0.9;
   } else {
     // plain clay: soft thumbprints so nothing reads as a bare primitive
-    float t = fbm(p * 5.0);
+    float t = fbm(p * 5.0, px * 5.0, 3);
     s.tint = vec3(0.95 + 0.07 * t);
-    s.h = t * 0.4 + fbm(p * 22.0) * 0.25 * keep(0.03, px);
+    s.h = t * 0.4 + fbm(p * 22.0, px * 22.0, 4) * 0.25 * keep(0.03, px);
   }
   return s;
 }
