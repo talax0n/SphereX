@@ -32,6 +32,8 @@ interface Session {
   mtime: number;
   last: Pick<Agent, "phase" | "kind">;
   title: string | null;
+  /** the thread name T3 Code shows, when T3 runs this session */
+  t3Title: string | null;
   titledAt: number;
   tail: string;
 }
@@ -133,13 +135,36 @@ function claudeTitle(text: string): string | null {
   return title;
 }
 
+/** Claude names a transcript by its session id; Codex ends the rollout file name with its thread id */
+const nativeId = (path: string) => {
+  const id = basename(path, ".jsonl").slice(-36);
+  return /^[0-9a-f-]{36}$/.test(id) ? id : null;
+};
+
 /** Codex keeps the short thread name in its state db (`title` there is the whole first prompt), beside sessions/YYYY/MM/DD. */
 function codexTitle(path: string): string | null {
   const CODEX_DB = join(path, "../../../../../state_5.sqlite");
-  const id = basename(path, ".jsonl").slice(-36);
-  if (!/^[0-9a-f-]{36}$/.test(id)) return null;
+  const id = nativeId(path);
+  if (!id) return null;
   try {
     return cleanTitle(execFileSync("sqlite3", ["-readonly", CODEX_DB, `select name from threads where id = '${id}'`], { encoding: "utf8", timeout: 2_000 }));
+  } catch {
+    return null;
+  }
+}
+
+const T3_DB = join(homedir(), ".t3/userdata/statev2.sqlite");
+/**
+ * T3 Code names a thread from its first message and keeps the user's renames. A session it runs often
+ * never gets a Claude ai-title, and its delegated Codex threads have no Codex name.
+ */
+function t3Title(path: string): string | null {
+  const id = nativeId(path);
+  if (!id) return null;
+  try {
+    const sql = `select t.title from orchestration_v2_projection_provider_threads p join orchestration_v2_projection_threads t using (thread_id)
+      where json_extract(p.payload_json, '$.nativeThreadRef.nativeId') = '${id}' order by p.updated_at desc limit 1`;
+    return cleanTitle(execFileSync("sqlite3", ["-readonly", T3_DB, sql], { encoding: "utf8", timeout: 2_000, stdio: ["ignore", "pipe", "ignore"] }));
   } catch {
     return null;
   }
@@ -185,7 +210,7 @@ function scan(): Pulse {
     if (!s) {
       // files that predate the watcher start at EOF; a fresh session is read from its first line
       const fresh = !first && now - st.birthtimeMs < LIVE_MS;
-      s = { provider, offset: fresh ? 0 : st.size, mtime: st.mtimeMs, last: { phase: "thinking", kind: "other" }, title: null, titledAt: 0, tail: "" };
+      s = { provider, offset: fresh ? 0 : st.size, mtime: st.mtimeMs, last: { phase: "thinking", kind: "other" }, title: null, t3Title: null, titledAt: 0, tail: "" };
       sessions.set(path, s);
     }
     if (st.size < s.offset) s.offset = s.tail.length ? 0 : st.size;
@@ -200,15 +225,18 @@ function scan(): Pulse {
     countedToday.add(owner);
     // the title is the owning session's, never a subagent's brief
     const o = sessions.get(owner) ?? s;
-    // a running Claude session's title sits behind the offset; Codex renames threads, so recheck it each minute
-    if (!o.titledAt || (o.provider === "codex" && now - o.titledAt > HEARTBEAT_MS)) {
+    // a running Claude session's title sits behind the offset, so it is read once; T3 and Codex rename threads, so recheck them each minute
+    if (!o.titledAt || now - o.titledAt > HEARTBEAT_MS) {
+      if (!o.titledAt && o.provider === "claude")
+        try {
+          o.title = claudeTitle(readFileSync(owner, "utf8")) ?? o.title;
+        } catch {}
+      if (o.provider === "codex") o.title = codexTitle(owner);
+      o.t3Title = t3Title(owner);
       o.titledAt = now;
-      try {
-        o.title = o.provider === "claude" ? (claudeTitle(readFileSync(owner, "utf8")) ?? o.title) : codexTitle(owner);
-      } catch {}
     }
     // id from the owner so a session keeps its villager while its subagents do the writing
-    busy.push([s.mtime, { id: idOf(owner), provider: s.provider, ...s.last, title: o.title }]);
+    busy.push([s.mtime, { id: idOf(owner), provider: s.provider, ...s.last, title: o.t3Title ?? o.title }]);
   }
   first = false;
   const lastSeen = Math.round(Math.max(0, ...[...sessions.values()].map((s) => s.mtime)));

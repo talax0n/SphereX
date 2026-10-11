@@ -8,6 +8,12 @@ export interface Release {
 /** newest first */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.9.1",
+    date: "2026-10-11",
+    title: "Names over heads",
+    notes: ["More of the people at work in HQ now show what they are working on."],
+  },
+  {
     version: "1.9.0",
     date: "2026-10-11",
     title: "Everyone is someone",
