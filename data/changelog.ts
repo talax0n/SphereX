@@ -12,6 +12,10 @@ export const CHANGELOG: Release[] = [
     date: "2026-10-11",
     title: "Straight to the point",
     notes: [
+      "Every station has its own link now, like theola.dev/projects, and it opens straight onto that book.",
+      "The address bar follows whichever book you have open, so you can share it.",
+      "A plain page at theola.dev/read has everything in one scroll, for when you just want to read.",
+      "Browsers that can't draw the planet go straight to that page.",
       "A live pill up top tells you when my AI agents are building right now.",
       "Tap it to see what they are working on, and walk over to watch them.",
       "The daily quests and streaks are gone, so the screen is calmer.",

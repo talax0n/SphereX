@@ -15,10 +15,15 @@ const syne = Syne({
   weight: ["700", "800"],
 });
 
+const description =
+  "Theo Niomba, fullstack engineer in Indonesia. Walk a tiny clay planet and open each station's book to read my projects, experience, skills and awards.";
+
 export const metadata: Metadata = {
-  title: "Theo — Portfolio",
-  description:
-    "Roll around Theo's clay archipelago to explore projects, experience, skills and more.",
+  metadataBase: new URL("https://theola.dev"),
+  title: "Theo Niomba · Fullstack Engineer",
+  description,
+  openGraph: { title: "Theo Niomba · Fullstack Engineer", description, url: "/", siteName: "SphereX", type: "website" },
+  twitter: { card: "summary", title: "Theo Niomba · Fullstack Engineer", description },
 };
 
 export const viewport = {

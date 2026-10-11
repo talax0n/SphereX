@@ -29,7 +29,8 @@ export type GameAction =
   | { type: "skip" }
   | { type: "landed" }
   | { type: "replay" }
-  | { type: "hydrate"; visited: readonly StationId[]; introSeen: boolean };
+  /** `start` is a deep link: skip the intro and open this station's book */
+  | { type: "hydrate"; visited: readonly StationId[]; introSeen: boolean; start?: StationId };
 
 /** Every visit starts mid-drop; hydration turns it into the intro for first-time visitors. */
 export const initialState: GameState = {
@@ -70,6 +71,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return { mode: "onboarding", step: 0, ...progress(state) };
     case "hydrate": {
       const restored: Progress = { visited: new Set([...state.visited, ...action.visited]) };
+      if (action.start) return { ...restored, mode: "inspecting", station: action.start, visited: new Set(restored.visited).add(action.start) };
       if (!action.introSeen && state.mode === "landing") return { mode: "onboarding", step: 0, ...restored };
       return { ...state, ...restored };
     }

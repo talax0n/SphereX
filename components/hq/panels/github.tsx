@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowUpRight } from "lucide-react";
 import type { Span } from "@/data/github";
 import { useContributions } from "../contributions";

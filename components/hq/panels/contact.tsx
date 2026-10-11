@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { ArrowUpRight, Check, Copy } from "lucide-react";
 import { PROFILE } from "@/data/profile";

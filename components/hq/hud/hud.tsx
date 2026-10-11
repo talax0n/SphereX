@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { STATIONS, type StationId } from "@/data/stations";
 import { PROFILE } from "@/data/profile";
@@ -12,6 +13,12 @@ export function Wordmark() {
       <div className="mt-1.5 text-[11px] tracking-[0.12em] text-(--sky-mute,#6b6b6b) uppercase">
         {PROFILE.role}
       </div>
+      <Link
+        href="/read"
+        className="pointer-events-auto mt-1 inline-block text-[11px] text-(--sky-mute,#6b6b6b) underline-offset-2 hover:text-hq-accent hover:underline"
+      >
+        Just read it →
+      </Link>
     </div>
   );
 }

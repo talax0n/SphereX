@@ -38,7 +38,7 @@ const isStation = (v: unknown): v is StationId => typeof v === "string" && v in 
 
 const STATIONS_DONE = "All 8 lit. Thanks for looking around!";
 
-export function useHQ() {
+export function useHQ(start?: StationId) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
   const [toast, setToast] = useState<Toast | null>(null);
   const stateRef = useRef(state);
@@ -52,18 +52,35 @@ export function useHQ() {
   }, [state]);
 
   useEffect(() => {
+    const gl = document.createElement("canvas");
+    if (!gl.getContext("webgl2") && !gl.getContext("webgl")) location.replace(start ? `/read#${start}` : "/read");
     const introSeen = localStorage.getItem(INTRO_KEY) === "1";
-    // a first visit opens already hanging in the air rather than floating up from the drop-in
-    if (!introSeen) {
+    if (start) {
+      // a deep link stands the player at the station's door, already on the ground
+      ctl.player.n.copy(LANDMARKS[start].door);
+      toward(ctl.player.n, LANDMARKS[start].n, ctl.north);
+      ctl.player.heading.copy(ctl.north);
+      ctl.intro = "ground";
+      ctl.alt = 0;
+    } else if (!introSeen) {
+      // a first visit opens already hanging in the air rather than floating up from the drop-in
       ctl.alt = HOVER;
       ctl.player.heading.copy(ctl.north).negate();
     }
-    dispatch({ type: "hydrate", visited: load(VISITED_KEY, isStation), introSeen });
-  }, []);
+    dispatch({ type: "hydrate", visited: load(VISITED_KEY, isStation), introSeen, start });
+  }, [start]);
 
+  // a deep link skipped the intro without showing it, so it still plays on the next plain visit
   useEffect(() => {
-    if (state.mode === "exploring") localStorage.setItem(INTRO_KEY, "1");
-  }, [state.mode]);
+    if (state.mode === "exploring" && !start) localStorage.setItem(INTRO_KEY, "1");
+  }, [state.mode, start]);
+
+  // the address bar names the open book; replaceState keeps Next from remounting the page
+  useEffect(() => {
+    if (state.mode !== "inspecting" && state.mode !== "exploring") return;
+    const path = state.mode === "inspecting" ? `/${state.station}` : "/";
+    if (location.pathname !== path) history.replaceState(null, "", path);
+  }, [state]);
 
   const step = state.mode === "onboarding" ? state.step : -1;
   const stepAt = useRef(0);

@@ -15,6 +15,7 @@ import { IntroControls } from "./scene/intro";
 import { useHQ } from "./use-hq";
 import { usePulse } from "./use-pulse";
 import { useRoom } from "./use-room";
+import type { StationId } from "@/data/stations";
 
 // The DOM shell paints first; three.js loads behind a plain placeholder.
 const Scene = dynamic(() => import("./scene/scene"), {
@@ -22,8 +23,9 @@ const Scene = dynamic(() => import("./scene/scene"), {
   loading: () => <div className="absolute inset-0" />,
 });
 
-export function HQ() {
-  const { state, toast, travel, open, close, next, skip, replay, toggleMap } = useHQ();
+/** `start` deep-links to a station: no intro, its book already open */
+export function HQ({ start }: { start?: StationId }) {
+  const { state, toast, travel, open, close, next, skip, replay, toggleMap } = useHQ(start);
   const current = state.mode === "inspecting" ? state.station : state.mode === "exploring" ? state.near : null;
   // the intro has the stage to itself; the first render is a drop-in too, so nothing flashes before it
   const intro = state.mode === "onboarding" || state.mode === "landing";
