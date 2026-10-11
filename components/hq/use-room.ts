@@ -57,7 +57,7 @@ function ownerKey(): string | null {
       if (OWNER_KEY.test(given)) localStorage.setItem(OWNER, given);
       else {
         localStorage.removeItem(OWNER);
-        console.warn("owner key ignored: it must be 16 to 256 printable characters with no spaces");
+        console.warn("owner key ignored: it must be 4 to 256 printable characters with no spaces");
       }
     }
     return localStorage.getItem(OWNER);

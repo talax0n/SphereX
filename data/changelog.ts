@@ -12,11 +12,10 @@ export const CHANGELOG: Release[] = [
     date: "2026-10-11",
     title: "Read it like a book",
     notes: [
-      "The stations now share one old leather-bound book, with a gold-stamped cover and yellowed pages.",
-      "The cover swings open at the station's chapter and shuts when you close it.",
+      "Every station now keeps its own old leather-bound book, with a gold-stamped cover and yellowed pages.",
+      "The cover swings open on a title page and shuts when you close it.",
       "Pages turn over on the spine, two at a time on a big screen.",
       "Turn pages with the arrows under the book, the arrow keys, or a swipe on a phone.",
-      "A contents page inside the cover jumps to any chapter.",
       "Every project gets a page of its own.",
     ],
   },

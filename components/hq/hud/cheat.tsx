@@ -1,5 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
-import { Crown } from "lucide-react";
+import { Crown, X } from "lucide-react";
 import { OWNER_KEY } from "@/data/room";
 import type { Room } from "../use-room";
 
@@ -69,6 +69,14 @@ export function Cheat({ room }: { room: Room }) {
       aria-label="Cheats"
       className="m-auto w-[min(360px,calc(100vw-2rem))] rounded-3xl border border-hq-line bg-white p-5 text-hq-ink shadow-[0_24px_60px_-24px_rgba(0,0,0,0.3)] backdrop:bg-black/40"
     >
+      <button
+        type="button"
+        onClick={() => dialog.current?.close()}
+        aria-label="Close cheats"
+        className="absolute top-4 right-4 rounded-full border border-hq-line p-1.5 text-hq-ink transition-colors hover:bg-hq-bg pointer-coarse:p-2.5"
+      >
+        <X className="size-4" />
+      </button>
       {king ? (
         <div className="flex flex-col items-center gap-2 py-2 text-center">
           <Crown className="size-8 text-[#d9a21e]" strokeWidth={2.5} />

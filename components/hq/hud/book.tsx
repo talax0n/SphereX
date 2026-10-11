@@ -2,12 +2,12 @@ import { type PointerEvent, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { motion, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import { PROFILE } from "@/data/profile";
-import { STATIONS, STATION_BY_ID, type StationId } from "@/data/stations";
+import { STATION_BY_ID, type StationId } from "@/data/stations";
 import { cn } from "@/lib/utils";
-import { BOOK, firstPage } from "../panels";
+import { BOOKS } from "../panels";
 
-/** leaf 0 is the contents inside the cover; leaf n is BOOK page n, so leaf numbers are page numbers */
-const LEAVES = BOOK.length + 1;
+/** leaf 0 is the title page; leaf n is the book's page n, so leaf numbers are page numbers */
+const leavesOf = (book: StationId) => BOOKS[book].length + 1;
 /** the board is stiff and slow, paper is light (StPageFlip's hard and soft pages) */
 const COVER_FOR = 0.9;
 const PAGE_FOR = 0.7;
@@ -85,62 +85,44 @@ function edge(leaves: number, side: Side) {
   return Array.from({ length: lines }, (_, i) => `${dir * (2 * i + 1)}px ${i + 1}px 0 #c4ab7c, ${dir * (2 * i + 2)}px ${i + 1}px 0 #ead9b3`).join(", ");
 }
 
-function Cover() {
+function Cover({ book }: { book: StationId }) {
+  const station = STATION_BY_ID[book];
   return (
     <div style={LEATHER} className="relative flex h-full flex-col overflow-hidden rounded-l-[3px] rounded-r-xl p-5 pl-8">
       {/* the hinge groove a hardback bends along, and light catching the rounded spine */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,rgba(0,0,0,0.45),rgba(255,220,170,0.12)_2.5%,transparent_6%,rgba(0,0,0,0.3)_7%,transparent_8.5%)]" />
       <div className="relative flex flex-1 flex-col items-center justify-between rounded-md border-4 border-double border-[#b88d45]/70 p-6 text-center">
-        <p className={cn(GOLD, "font-serif text-[11px] tracking-[0.4em] uppercase")}>Portfolio</p>
+        <p className={cn(GOLD, "font-serif text-[11px] tracking-[0.4em] uppercase")}>Volume {station.hotkey}</p>
         <div className="flex flex-col items-center">
           <span className={cn(GOLD, "font-serif text-lg")}>❦</span>
-          <h2 className={cn(GOLD, "mt-2 font-serif text-6xl font-bold italic leading-none max-sm:text-5xl")}>{PROFILE.name}</h2>
+          <h2 className={cn(GOLD, "mt-2 font-serif text-6xl font-bold italic leading-none max-sm:text-5xl")}>{station.label}</h2>
           <span className="mt-4 h-px w-24 bg-[#b88d45]/70" />
-          <p className={cn(GOLD, "mt-3 font-serif text-[12px] tracking-[0.25em] uppercase")}>{PROFILE.role}</p>
+          <p className={cn(GOLD, "mt-3 font-serif text-[12px] tracking-[0.25em] uppercase")}>{PROFILE.name}</p>
         </div>
-        <p className={cn(GOLD, "font-serif text-[11px] tracking-[0.15em]")}>{PROFILE.location}</p>
+        <p className={cn(GOLD, "font-serif text-[11px] tracking-[0.15em]")}>{PROFILE.role}</p>
       </div>
     </div>
   );
 }
 
-function Contents({ onJump }: { onJump: (leaf: number) => void }) {
+function TitlePage({ book }: { book: StationId }) {
+  const station = STATION_BY_ID[book];
   return (
-    <div className="flex h-full flex-col">
-      <h2 className="font-display text-3xl font-extrabold tracking-tight">Contents</h2>
-      <ol className="mt-5 space-y-1">
-        {STATIONS.map((s) => {
-          const leaf = firstPage(s.id) + 1;
-          return (
-            <li key={s.id}>
-              <button
-                type="button"
-                onClick={() => onJump(leaf)}
-                className="flex w-full items-baseline gap-2 rounded-md py-1.5 text-left text-[14px] text-hq-ink transition-colors hover:text-[#8a5a2b]"
-              >
-                <span className="w-6 text-[11px] tabular-nums text-hq-mute">0{s.hotkey}</span>
-                {s.label}
-                <span className="mx-1 flex-1 translate-y-[-3px] border-b border-dotted border-hq-line" />
-                <span className="text-[12px] tabular-nums text-hq-mute">{leaf}</span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
+    <div className="flex h-full flex-col items-center justify-center text-center font-serif">
+      <p className="text-[11px] tracking-[0.4em] text-[#8b6f47] uppercase">Volume {station.hotkey}</p>
+      <h2 className="mt-6 text-5xl font-bold italic leading-none">{station.label}</h2>
+      <span className="mt-6 h-px w-20 bg-[#8b6f47]/50" />
+      <p className="mt-6 text-[13px] tracking-[0.25em] uppercase">{PROFILE.name}</p>
+      <p className="mt-1 text-[12px] text-[#8b6f47] italic">{PROFILE.role}</p>
     </div>
   );
 }
 
-function Page({ leaf }: { leaf: number }) {
-  const { chapter, Content } = BOOK[leaf - 1];
-  const station = STATION_BY_ID[chapter];
-  const opens = firstPage(chapter) === leaf - 1;
+function Page({ book, leaf }: { book: StationId; leaf: number }) {
+  const Content = BOOKS[book][leaf - 1];
   return (
     <div className="flex h-full flex-col">
-      <p className="font-serif text-[10px] tracking-[0.25em] text-[#8b6f47] uppercase">
-        0{station.hotkey} · {station.label}
-      </p>
-      {opens && <h2 className="mt-2 font-display text-4xl font-extrabold leading-none tracking-tight max-sm:text-3xl">{station.label}</h2>}
+      <p className="font-serif text-[10px] tracking-[0.25em] text-[#8b6f47] uppercase">{STATION_BY_ID[book].label}</p>
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
         <Content />
       </div>
@@ -148,9 +130,8 @@ function Page({ leaf }: { leaf: number }) {
   );
 }
 
-
 /** one side of a sheet of paper; the gutter darkens towards the spine */
-function Sheet({ face, side, onJump }: { face: Face; side: Side; onJump: (leaf: number) => void }) {
+function Sheet({ face, side, book }: { face: Face; side: Side; book: StationId }) {
   return (
     <div
       className={cn(
@@ -159,7 +140,7 @@ function Sheet({ face, side, onJump }: { face: Face; side: Side; onJump: (leaf: 
       )}
       style={paper(side)}
     >
-      <div className="min-h-0 flex-1">{face === 0 ? <Contents onJump={onJump} /> : typeof face === "number" && <Page leaf={face} />}</div>
+      <div className="min-h-0 flex-1">{face === 0 ? <TitlePage book={book} /> : typeof face === "number" && <Page book={book} leaf={face} />}</div>
       {typeof face === "number" && face > 0 && (
         <p className={cn("pt-2 font-serif text-[11px] tabular-nums text-[#8b6f47]", side === "left" ? "text-left" : "text-right")}>{face}</p>
       )}
@@ -168,20 +149,20 @@ function Sheet({ face, side, onJump }: { face: Face; side: Side; onJump: (leaf: 
 }
 
 /** One face of a turning leaf: paper, or for the cover board either the cover or the board with its pasted-down page. */
-function Face({ face, side, hard, onJump }: { face: Face; side: Side; hard: boolean; onJump: (leaf: number) => void }) {
-  if (face === "cover") return <Cover />;
-  if (!hard) return <Sheet face={face} side={side} onJump={onJump} />;
+function Face({ face, side, hard, book }: { face: Face; side: Side; hard: boolean; book: StationId }) {
+  if (face === "cover") return <Cover book={book} />;
+  if (!hard) return <Sheet face={face} side={side} book={book} />;
   return (
     <div style={LEATHER} className={cn("h-full", side === "left" ? "rounded-l-xl rounded-r-[3px]" : "rounded-r-xl rounded-l-[3px]")}>
       <div className={cn("absolute", PAPER[side])}>
-        <Sheet face={face} side={side} onJump={onJump} />
+        <Sheet face={face} side={side} book={book} />
       </div>
     </div>
   );
 }
 
 /** The leaf swinging on the spine; it darkens as it stands up off the page, the way StPageFlip shades a flip. */
-function Leaf({ turn, duration, onLand, onJump }: { turn: Turn; duration: number; onLand: () => void; onJump: (leaf: number) => void }) {
+function Leaf({ turn, duration, onLand, book }: { turn: Turn; duration: number; onLand: () => void; book: StationId }) {
   const rot = useMotionValue(turn.from);
   const shade = useTransform(rot, (r) => Math.sin((Math.abs(r) * Math.PI) / 180) * 0.28);
   const sides: [Side, Side] = turn.side === "full" ? ["full", "full"] : turn.side === "right" ? ["right", "left"] : ["left", "right"];
@@ -196,7 +177,7 @@ function Leaf({ turn, duration, onLand, onJump }: { turn: Turn; duration: number
     >
       {[0, 1].map((i) => (
         <div key={i} className={cn("absolute inset-0 [backface-visibility:hidden]", i && "[transform:rotateY(180deg)]")}>
-          <Face face={i ? turn.back : turn.front} side={sides[i]} hard={turn.hard} onJump={onJump} />
+          <Face face={i ? turn.back : turn.front} side={sides[i]} hard={turn.hard} book={book} />
           <motion.div
             style={{ opacity: shade }}
             className={cn(
@@ -210,14 +191,13 @@ function Leaf({ turn, duration, onLand, onJump }: { turn: Turn; duration: number
   );
 }
 
-const nullable = (leaf: number): Face => (leaf < LEAVES ? leaf : null);
-
-/** The portfolio as a hardback: it arrives shut, swings its cover open at the station's chapter and turns page by page. */
+/** A station's own hardback: it arrives shut, swings its cover open on the title page and turns page by page. */
 export function Book({ id, onClose }: { id: StationId; onClose: () => void }) {
   const [pair] = useState(() => typeof window === "undefined" || window.innerWidth >= 640);
   const n = pair ? 2 : 1;
-  const start = firstPage(id) + 1;
-  const [pos, setPos] = useState(start - (start % n));
+  const LEAVES = leavesOf(id);
+  const nullable = (leaf: number): Face => (leaf < LEAVES ? leaf : null);
+  const [pos, setPos] = useState(0);
   const turnId = useRef(0);
   const [turn, setTurn] = useState<Turn | null>(() => ({
     id: 0,
@@ -226,12 +206,12 @@ export function Book({ id, onClose }: { id: StationId; onClose: () => void }) {
     from: 0,
     to: -180,
     front: "cover",
-    back: pair ? pos : null,
-    under: pair ? [null, nullable(pos + 1)] : [pos],
-    next: pos,
+    back: pair ? 0 : null,
+    under: pair ? [null, nullable(1)] : [0],
+    next: 0,
   }));
   const still = useReducedMotion();
-  const station = STATION_BY_ID[BOOK[Math.max(pos, 1) - 1].chapter];
+  const station = STATION_BY_ID[id];
 
   const begin = (t: Omit<Turn, "id">) => setTurn((cur) => cur ?? { ...t, id: ++turnId.current });
   const forward = () => {
@@ -256,9 +236,6 @@ export function Book({ id, onClose }: { id: StationId; onClose: () => void }) {
         ? { side: "left", hard: true, from: 0, to: 180, front: pos, back: "cover", under: [null, nullable(pos + 1)], next: "closed" }
         : { side: "full", hard: true, from: -180, to: 0, front: "cover", back: null, under: [pos], next: "closed" },
     );
-  const jump = (leaf: number) => {
-    if (!turn) setPos(leaf - (leaf % n));
-  };
   const land = () => {
     if (!turn) return;
     if (turn.next === "closed") return onClose();
@@ -335,18 +312,18 @@ export function Book({ id, onClose }: { id: StationId; onClose: () => void }) {
         {shown.map((face, i) => (
           <div key={i} className={cn("absolute", HALF[sides[i]], face === null && closed && "invisible")}>
             <div className={cn("absolute", PAPER[sides[i]])} style={{ boxShadow: edge(stack(sides[i]), sides[i]) }}>
-              <Sheet face={face} side={sides[i]} onJump={jump} />
+              <Sheet face={face} side={sides[i]} book={id} />
             </div>
           </div>
         ))}
-        {turn && <Leaf key={turn.id} turn={turn} duration={duration} onLand={land} onJump={jump} />}
+        {turn && <Leaf key={turn.id} turn={turn} duration={duration} onLand={land} book={id} />}
       </motion.div>
       <nav aria-label="Pages" className={cn("flex items-center gap-3 transition-opacity", closed && "pointer-events-none opacity-0")}>
         <button type="button" aria-label="Previous page" onClick={backward} disabled={pos === 0} className={TURN_BTN}>
           <ChevronLeft className="size-4" />
         </button>
         <p className="min-w-20 rounded-full bg-white/90 px-3 py-1 text-center text-[11px] tabular-nums text-hq-mute shadow-sm backdrop-blur" aria-live="polite">
-          {pos === 0 ? "Contents" : pair && pos + 1 < LEAVES ? `${pos}–${pos + 1}` : pos} / {LEAVES - 1}
+          {pos === 0 ? (pair ? 1 : "Title") : pair && pos + 1 < LEAVES ? `${pos}–${pos + 1}` : pos} / {LEAVES - 1}
         </p>
         <button type="button" aria-label="Next page" onClick={forward} disabled={pos + n >= LEAVES} className={TURN_BTN}>
           <ChevronRight className="size-4" />

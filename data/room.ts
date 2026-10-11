@@ -47,7 +47,7 @@ export type ServerMsg =
 
 const ID = /^[0-9a-z]{6}$/;
 /** what an owner key may look like (printable ASCII, so base64 fits); the real one lives only in the worker's `OWNER_KEY` secret */
-export const OWNER_KEY = /^[\x21-\x7e]{16,256}$/;
+export const OWNER_KEY = /^[\x21-\x7e]{4,256}$/;
 const FRAME_MAX = 4096;
 
 // a handful of slurs and profanity; a speed bump, not moderation
