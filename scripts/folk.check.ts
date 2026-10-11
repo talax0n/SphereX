@@ -116,8 +116,9 @@ const JOB = {
   github: ["cap", "satchel", "mug"],
   contact: ["newsboy", "satchel", "envelope"],
   updates: ["paper", "bowtie", "newspaper"],
+  guestbook: ["beanie", "scarf", "envelope"],
 } as const;
-const PROP = { about: "blueprint", projects: "laptop", experience: "briefcase", skills: "wrench", awards: "trophy", github: "mug", contact: "envelope", updates: "newspaper" };
+const PROP = { about: "blueprint", projects: "laptop", experience: "briefcase", skills: "wrench", awards: "trophy", github: "mug", contact: "envelope", updates: "newspaper", guestbook: "envelope" };
 assert.deepEqual(Object.keys(JOB).sort(), STATIONS.map((s) => s.id).sort());
 const own: string[] = [...KINDS.hair, ...KINDS.face, ...KINDS.bottom];
 for (const s of STATIONS) {
