@@ -30,6 +30,8 @@ interface Session {
   provider: Provider;
   offset: number;
   mtime: number;
+  /** when the watcher last read a line of real work; Claude appends bookkeeping like cost-state to idle transcripts */
+  active: number;
   last: Pick<Agent, "phase" | "kind">;
   title: string | null;
   /** the thread name T3 Code shows, when T3 runs this session */
@@ -181,7 +183,10 @@ function read(path: string, s: Session, size: number) {
     for (const l of lines) {
       try {
         const e = EVENT[s.provider](JSON.parse(l));
-        if (e) s.last = e;
+        if (e) {
+          s.last = e;
+          s.active = Date.now();
+        }
       } catch {}
     }
     if (s.provider === "claude") s.title = claudeTitle(lines.join("\n")) ?? s.title;
@@ -210,15 +215,15 @@ function scan(): Pulse {
     if (!s) {
       // files that predate the watcher start at EOF; a fresh session is read from its first line
       const fresh = !first && now - st.birthtimeMs < LIVE_MS;
-      s = { provider, offset: fresh ? 0 : st.size, mtime: st.mtimeMs, last: { phase: "thinking", kind: "other" }, title: null, t3Title: null, titledAt: 0, tail: "" };
+      s = { provider, offset: fresh ? 0 : st.size, mtime: st.mtimeMs, active: 0, last: { phase: "thinking", kind: "other" }, title: null, t3Title: null, titledAt: 0, tail: "" };
       sessions.set(path, s);
     }
     if (st.size < s.offset) s.offset = s.tail.length ? 0 : st.size;
     if (st.size > s.offset) read(path, s, st.size);
     s.mtime = st.mtimeMs;
     const cur = live.get(owner);
-    const awake = now - s.mtime < LIVE_MS || (path === owner && running.has(basename(path, ".jsonl")));
-    if (awake && (!cur || s.mtime > cur.mtime)) live.set(owner, s);
+    const awake = now - s.active < LIVE_MS || (path === owner && running.has(basename(path, ".jsonl")));
+    if (awake && (!cur || s.active > cur.active)) live.set(owner, s);
   }
   const busy: [number, Agent][] = [];
   for (const [owner, s] of live) {
@@ -236,7 +241,7 @@ function scan(): Pulse {
       o.titledAt = now;
     }
     // id from the owner so a session keeps its villager while its subagents do the writing
-    busy.push([s.mtime, { id: idOf(owner), provider: s.provider, ...s.last, title: o.t3Title ?? o.title }]);
+    busy.push([s.active, { id: idOf(owner), provider: s.provider, ...s.last, title: o.t3Title ?? o.title }]);
   }
   first = false;
   const lastSeen = Math.round(Math.max(0, ...[...sessions.values()].map((s) => s.mtime)));
