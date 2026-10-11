@@ -17,6 +17,8 @@ const HEAD = R + 1.1;
 const NEAR = 3;
 /** px between stacked bubbles */
 const GAP = 6;
+/** px from the head to the bubble's bottom edge, room for its tail */
+const LIFT = 12;
 const at = new Vector3();
 /** screen boxes of this frame's visible bubbles, centre x/y, reused */
 const boxes: { el: HTMLDivElement; x: number; y: number; w: number; h: number }[] = [];
@@ -81,7 +83,8 @@ export function Agents() {
       at.copy(head.position).project(camera);
       const x = ((at.x + 1) / 2) * size.width;
       const y = ((1 - at.y) / 2) * size.height;
-      boxes.push({ el: bubble, x, y, w: bubble.offsetWidth, h: bubble.offsetHeight });
+      const h = bubble.offsetHeight;
+      boxes.push({ el: bubble, x, y: y - LIFT - h / 2, w: bubble.offsetWidth, h });
     });
     // the bubble lowest on screen keeps its spot; any that would overlap one already placed climbs above it
     boxes.sort((a, b) => b.y - a.y);
@@ -110,15 +113,18 @@ export function Agents() {
   return lines.map((line, i) => line && (
     <group key={i} ref={(g) => void (heads.current[i] = g)}>
       <Html center zIndexRange={[13, 0]} style={{ pointerEvents: "none" }}>
-        <div
-          ref={(d) => void (bubbles.current[i] = d)}
-          style={{ opacity: 0 }}
-          className="hq-bubble relative w-max max-w-[220px] rounded-2xl border border-hq-line bg-white px-3 py-2 text-left text-[12px] leading-snug text-hq-ink shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] transition-[opacity,transform] duration-300 max-sm:max-w-[180px] max-sm:text-[11px]"
-        >
-          {line.title && <div className="font-medium">{line.title}</div>}
-          <div className={line.title ? "flex items-center gap-1.5 text-[11px] text-hq-ink/60" : "flex items-center gap-1.5"}>
-            {line.provider && <Logo provider={line.provider} />}
-            {line.status}
+        <div className="relative h-0 w-0">
+          <div
+            ref={(d) => void (bubbles.current[i] = d)}
+            style={{ opacity: 0, bottom: LIFT }}
+            className="hq-bubble absolute left-1/2 w-max max-w-[220px] -translate-x-1/2 rounded-2xl border border-hq-line bg-white px-3 py-2 text-left text-[12px] leading-snug text-hq-ink shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] transition-[opacity,transform] duration-300 max-sm:max-w-[180px] max-sm:text-[11px]"
+          >
+            {line.title && <div className="font-medium">{line.title}</div>}
+            <div className={line.title ? "flex items-center gap-1.5 text-[11px] text-hq-ink/60" : "flex items-center gap-1.5"}>
+              {line.provider && <Logo provider={line.provider} />}
+              {line.status}
+            </div>
+            <span aria-hidden className="absolute top-full left-1/2 -mt-[5px] size-2.5 -translate-x-1/2 rotate-45 border-r border-b border-hq-line bg-white" />
           </div>
         </div>
       </Html>
