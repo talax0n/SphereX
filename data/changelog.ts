@@ -12,6 +12,8 @@ export const CHANGELOG: Release[] = [
     date: "2026-10-11",
     title: "Straight to the point",
     notes: [
+      "A live pill up top tells you when my AI agents are building right now.",
+      "Tap it to see what they are working on, and walk over to watch them.",
       "The daily quests and streaks are gone, so the screen is calmer.",
     ],
   },

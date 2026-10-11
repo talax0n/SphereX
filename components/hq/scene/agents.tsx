@@ -4,7 +4,6 @@ import { Html } from "@react-three/drei";
 import { type Group, Vector3 } from "three";
 import { type Provider, say } from "@/data/pulse";
 import { ctl } from "../game";
-import { usePulse } from "../use-pulse";
 import { R, arc } from "./planet";
 import { type Activity, TIME_SCALE, reconcile, tend, town } from "./work";
 /** brand marks from simple-icons (Claude from v16, OpenAI from v13 before its removal) */
@@ -51,7 +50,6 @@ function lineOf(a: Activity): Line | null {
  * a finished one walks to a bed in its nap corner, sleeps it off, then its slot empties.
  */
 export function Agents() {
-  usePulse();
   // activities are replaced, never mutated, so a shallow copy is a faithful snapshot for rendering
   const [acts, setActs] = useState(() => [...town.acts]);
   const rev = useRef(town.rev);

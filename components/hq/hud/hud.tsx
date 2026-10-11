@@ -2,7 +2,6 @@ import { motion } from "framer-motion";
 import { STATIONS, type StationId } from "@/data/stations";
 import { PROFILE } from "@/data/profile";
 import { cn } from "@/lib/utils";
-import { Ps } from "./ps";
 
 export function Wordmark() {
   return (
@@ -12,7 +11,6 @@ export function Wordmark() {
       </h1>
       <div className="mt-1.5 text-[11px] tracking-[0.12em] text-(--sky-mute,#6b6b6b) uppercase">
         {PROFILE.role}
-        <Ps />
       </div>
     </div>
   );

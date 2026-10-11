@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Chat } from "./hud/chat";
 import { Cheat } from "./hud/cheat";
+import { Ps } from "./hud/ps";
 import { Dock, Hint, Replay, Toast, Wordmark } from "./hud/hud";
 import { EdgeArrows, MapChrome, Minimap } from "./hud/map";
 import { Sky } from "./sky";
@@ -12,6 +13,7 @@ import { Book } from "./hud/book";
 import { JumpButton, Stick } from "./hud/stick";
 import { IntroControls } from "./scene/intro";
 import { useHQ } from "./use-hq";
+import { usePulse } from "./use-pulse";
 import { useRoom } from "./use-room";
 
 // The DOM shell paints first; three.js loads behind a plain placeholder.
@@ -26,6 +28,7 @@ export function HQ() {
   // the intro has the stage to itself; the first render is a drop-in too, so nothing flashes before it
   const intro = state.mode === "onboarding" || state.mode === "landing";
   const map = state.mode === "map";
+  const { pulse } = usePulse();
   const room = useRoom(!intro);
 
   return (
@@ -36,6 +39,7 @@ export function HQ() {
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between p-4 sm:p-6">
         <div data-hud className={cn("transition-opacity duration-500", map && "max-sm:opacity-0")}>
           <Wordmark />
+          {!intro && !map && <Ps pulse={pulse} onWatch={() => travel("projects")} />}
         </div>
       </div>
 
@@ -64,7 +68,7 @@ export function HQ() {
         </div>
       )}
       {state.mode === "exploring" && (
-        <div data-hud className="absolute bottom-20 left-5 z-20 flex items-end gap-1.5 max-sm:bottom-auto max-sm:left-3 max-sm:top-24 sm:pointer-coarse:bottom-5">
+        <div data-hud className="absolute bottom-20 left-5 z-20 flex items-end gap-1.5 max-sm:bottom-auto max-sm:left-3 max-sm:top-32 sm:pointer-coarse:bottom-5">
           <Hint />
           <Replay onReplay={replay} />
         </div>
