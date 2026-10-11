@@ -1,6 +1,5 @@
 import { Color, type ColorRepresentation, Vector2, Vector3 } from "three";
 import { INTRO } from "@/data/onboarding";
-import { type DayLog, type Streak, extendStreak, freshDay, questRows } from "@/data/quests";
 import type { StationId } from "@/data/stations";
 import type { Pulse } from "@/data/pulse";
 import type { Villager, Visitor } from "./scene/folk";
@@ -9,9 +8,6 @@ import { dirAt, flatten } from "./scene/planet";
 
 interface Progress {
   visited: ReadonlySet<StationId>;
-  /** null until hydration reads the visitor's clock, so the server never renders a date */
-  daily: DayLog | null;
-  streak: Streak;
 }
 
 export type GameState =
@@ -33,49 +29,24 @@ export type GameAction =
   | { type: "skip" }
   | { type: "landed" }
   | { type: "replay" }
-  | { type: "walk"; steps: number }
-  /** the local date rolled over while the page was open */
-  | { type: "day"; date: string }
-  | {
-      type: "hydrate";
-      visited: readonly StationId[];
-      introSeen: boolean;
-      daily: DayLog;
-      streak: Streak;
-    };
+  | { type: "hydrate"; visited: readonly StationId[]; introSeen: boolean };
 
 /** Every visit starts mid-drop; hydration turns it into the intro for first-time visitors. */
 export const initialState: GameState = {
   mode: "landing",
   visited: new Set(),
-  daily: null,
-  streak: { count: 0, last: null },
 };
 
-const progress = ({ visited, daily, streak }: GameState): Progress => ({ visited, daily, streak });
+const progress = ({ visited }: GameState): Progress => ({ visited });
 
-const logged = (state: GameState, change: (log: DayLog) => Partial<DayLog>): GameState =>
-  state.daily ? { ...state, daily: { ...state.daily, ...change(state.daily) } } : state;
-
-/** Whatever moved today's log, the streak follows from it rather than from each action. */
 export function gameReducer(state: GameState, action: GameAction): GameState {
-  const next = step(state, action);
-  const log = next.daily;
-  if (!log || log === state.daily || next.streak.last === log.date) return next;
-  if (!questRows(log).every((r) => r.done)) return next;
-  return { ...next, streak: extendStreak(next.streak, log.date) };
-}
-
-function step(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "approach":
       if (state.mode !== "exploring" || state.near === action.id) return state;
       return { ...state, near: action.id };
-    case "open": {
+    case "open":
       if (state.mode === "onboarding" || state.mode === "landing") return state;
-      const opened = logged(state, (l) => (l.opened.includes(action.id) ? {} : { opened: [...l.opened, action.id] }));
-      return { ...progress(opened), mode: "inspecting", station: action.id, visited: new Set(state.visited).add(action.id) };
-    }
+      return { ...progress(state), mode: "inspecting", station: action.id, visited: new Set(state.visited).add(action.id) };
     case "close":
       if (state.mode === "inspecting") return { mode: "exploring", near: state.station, ...progress(state) };
       if (state.mode === "map") return { mode: "exploring", near: null, ...progress(state) };
@@ -84,11 +55,6 @@ function step(state: GameState, action: GameAction): GameState {
       if (state.mode === "map") return { mode: "exploring", near: null, ...progress(state) };
       if (state.mode !== "exploring" && state.mode !== "inspecting") return state;
       return { mode: "map", ...progress(state) };
-    case "walk":
-      return logged(state, (l) => ({ steps: l.steps + action.steps }));
-    case "day":
-      if (!state.daily || state.daily.date === action.date) return state;
-      return { ...state, daily: freshDay(action.date) };
     case "next":
       if (state.mode !== "onboarding") return state;
       if (state.step + 1 < INTRO.length) return { ...state, step: state.step + 1 };
@@ -103,11 +69,7 @@ function step(state: GameState, action: GameAction): GameState {
       if (state.mode !== "exploring") return state;
       return { mode: "onboarding", step: 0, ...progress(state) };
     case "hydrate": {
-      const restored: Progress = {
-        visited: new Set([...state.visited, ...action.visited]),
-        daily: action.daily,
-        streak: action.streak,
-      };
+      const restored: Progress = { visited: new Set([...state.visited, ...action.visited]) };
       if (!action.introSeen && state.mode === "landing") return { mode: "onboarding", step: 0, ...restored };
       return { ...state, ...restored };
     }
@@ -144,8 +106,6 @@ export interface Controls {
   gesture: { current: Gesture; t: number; blend: number; side: 1 | -1 };
   /** player's height above the ground, in world units */
   alt: number;
-  /** distance walked since the last 10Hz poll, drained into today's steps */
-  walked: number;
   /** the room confirmed you are the site owner, so you wear the crown */
   king: boolean;
   /** filled by the crowd once it spawns, so the map can chart villagers without importing the scene */
@@ -186,7 +146,6 @@ export const ctl: Controls = {
   intro: "fall",
   gesture: { current: "rest", t: 0, blend: 1, side: 1 },
   alt: DROP_IN,
-  walked: 0,
   king: false,
   villagers: [],
   visitors: [],

@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { Navigation2, X } from "lucide-react";
 import { Vector3 } from "three";
 import { STATIONS, type StationId } from "@/data/stations";
-import { cn } from "@/lib/utils";
 import { ACCENT } from "../scene/clay";
 import { IDENTITY } from "../scene/dioramas";
 import { LANDMARKS, MINIMAP_VIEW, R } from "../scene/planet";
@@ -11,8 +10,6 @@ import { ctl } from "../game";
 
 interface Charted {
   visited: ReadonlySet<StationId>;
-  /** today's quest destination, ringed on the map */
-  target: StationId | null;
 }
 
 const REDRAW_MS = 66;
@@ -21,10 +18,10 @@ const at = { x: 0, y: 0 };
 const right = new Vector3();
 
 /**
- * The marks the live planet underneath can't show: today's target, visited checks and the
+ * The marks the live planet underneath can't show: visited checks and the
  * player's heading. Projects straight down over the player, as the scene's minimap camera does.
  */
-function draw(canvas: HTMLCanvasElement, { visited, target }: Charted) {
+function draw(canvas: HTMLCanvasElement, { visited }: Charted) {
   const ctx = canvas.getContext("2d");
   const size = canvas.clientWidth;
   if (!ctx || !size) return;
@@ -50,22 +47,8 @@ function draw(canvas: HTMLCanvasElement, { visited, target }: Charted) {
   };
 
   ctx.lineCap = ctx.lineJoin = "round";
-  const pulse = reduced?.matches ? 0 : Math.sin(performance.now() / 260) * 0.5 + 0.5;
   for (const s of STATIONS) {
     const front = place(LANDMARKS[s.id].n);
-    if (s.id === target) {
-      ctx.beginPath();
-      ctx.arc(at.x, at.y, 7 + pulse * 2.5, 0, Math.PI * 2);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = ACCENT;
-      ctx.stroke();
-      if (!front) {
-        ctx.beginPath();
-        ctx.arc(at.x, at.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = IDENTITY[s.id].top;
-        ctx.fill();
-      }
-    }
     if (front && visited.has(s.id)) {
       ctx.beginPath();
       ctx.moveTo(at.x - 3, at.y);
@@ -171,7 +154,7 @@ export function MapChrome({ onClose }: { onClose: () => void }) {
 }
 
 /** Screen-edge pointers to places out of view. The scene picks, places and turns them every frame. */
-export function EdgeArrows({ target, onTravel }: { target: StationId | null; onTravel: (id: StationId) => void }) {
+export function EdgeArrows({ onTravel }: { onTravel: (id: StationId) => void }) {
   return (
     <div aria-label="Places out of view" role="group">
       {STATIONS.map((s, i) => (
@@ -187,10 +170,7 @@ export function EdgeArrows({ target, onTravel }: { target: StationId | null; onT
           onClick={() => onTravel(s.id)}
           aria-label={`Go to ${s.label}`}
           style={{ visibility: "hidden" }}
-          className={cn(
-            "absolute top-0 left-0 z-10 flex items-center gap-1.5 rounded-full border bg-white/95 py-1 pr-2.5 pl-1 text-[11px] max-sm:size-11 max-sm:justify-center max-sm:p-0 font-medium text-hq-ink shadow-[0_8px_20px_-12px_rgba(0,0,0,0.35)] backdrop-blur transition-colors hover:border-hq-accent pointer-coarse:min-h-11",
-            s.id === target ? "border-hq-accent" : "border-hq-line",
-          )}
+          className="absolute top-0 left-0 z-10 flex items-center gap-1.5 rounded-full border border-hq-line bg-white/95 py-1 pr-2.5 pl-1 text-[11px] max-sm:size-11 max-sm:justify-center max-sm:p-0 font-medium text-hq-ink shadow-[0_8px_20px_-12px_rgba(0,0,0,0.35)] backdrop-blur transition-colors hover:border-hq-accent pointer-coarse:min-h-11"
         >
           <span className="grid size-6 place-items-center rounded-full text-white" style={{ background: IDENTITY[s.id].top }}>
             <Navigation2 className="size-3.5 fill-current" aria-hidden />

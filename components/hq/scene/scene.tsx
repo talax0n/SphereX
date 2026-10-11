@@ -25,7 +25,6 @@ import { Rigs, Screens } from "./workplaces";
 
 interface SceneProps {
   state: GameState;
-  target: StationId | null;
   room: Room;
   onTravel: (id: StationId) => void;
   onOpen: (id: StationId) => void;
@@ -33,7 +32,7 @@ interface SceneProps {
   onSkip: () => void;
 }
 
-export default function Scene({ state, target, room, onTravel, onOpen, onNext, onSkip }: SceneProps) {
+export default function Scene({ state, room, onTravel, onOpen, onNext, onSkip }: SceneProps) {
   const [dpr, setDpr] = useState(1.5);
   const near = state.mode === "exploring" ? state.near : null;
   const inspecting = state.mode === "inspecting" ? state.station : null;
@@ -57,14 +56,13 @@ export default function Scene({ state, target, room, onTravel, onOpen, onNext, o
         near={near}
         inspecting={inspecting}
         visited={state.visited}
-        target={target}
         show={state.mode === "exploring" || state.mode === "inspecting"}
       />
       <GithubGrid />
       <Crowd near={near} onOpen={onOpen} />
       <Agents />
       <Speech lines={room.lines} names={room.names} me={room.me} kings={room.kings} onMute={room.mute} />
-      {state.mode === "map" && <Globe visited={state.visited} target={target} onTravel={onTravel} />}
+      {state.mode === "map" && <Globe visited={state.visited} onTravel={onTravel} />}
       {state.mode === "onboarding" && <IntroBubble step={state.step} onNext={onNext} onSkip={onSkip} />}
       <Ping />
       <Confetti />

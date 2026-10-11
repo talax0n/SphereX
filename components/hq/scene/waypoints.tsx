@@ -27,7 +27,7 @@ const CHECK_UP = 0.4;
 const TAG_UP = 0.28;
 /** world half-width of a roof: an arrow slides at most this far sideways to stay on screen over its building */
 const HALF = 1;
-/** edge arrows: at most today's target plus this many of the nearest unvisited places */
+/** edge arrows: this many of the nearest unvisited places */
 const NEAREST = 3;
 const GUIDE_AHEAD = 1.1;
 /** pixels the header, dock and screen edge keep for the HUD */
@@ -106,8 +106,6 @@ interface WaypointsProps {
   near: StationId | null;
   inspecting: StationId | null;
   visited: ReadonlySet<StationId>;
-  /** today's unfinished visit quest */
-  target: StationId | null;
   /** markers stay out of the intro's white sky */
   show: boolean;
 }
@@ -116,13 +114,13 @@ interface WaypointsProps {
  * Everything that points at a landmark: a bouncing clay arrow over each one (a check once visited),
  * its name tag, screen-edge arrows for the ones out of view, and a ground arrow while travelling.
  */
-export function Waypoints({ near, inspecting, visited, target, show }: WaypointsProps) {
+export function Waypoints({ near, inspecting, visited, show }: WaypointsProps) {
   const arrows = useRef<InstancedMesh>(null);
   const checks = useRef<InstancedMesh>(null);
   const guide = useRef<Mesh>(null);
   const tags = useRef<(HTMLDivElement | null)[]>([]);
   const tagGroups = useRef<(Group | null)[]>([]);
-  const live = useRef({ near, inspecting, visited, target, show });
+  const live = useRef({ near, inspecting, visited, show });
   // rooflines; the GitHub plinth is nearly flat but its contribution bars stand up off it
   const roofs = useMemo(
     () =>
@@ -136,12 +134,12 @@ export function Waypoints({ near, inspecting, visited, target, show }: Waypoints
   );
 
   useEffect(() => {
-    live.current = { near, inspecting, visited, target, show };
-  }, [near, inspecting, visited, target, show]);
+    live.current = { near, inspecting, visited, show };
+  }, [near, inspecting, visited, show]);
 
   useFrame(({ camera, clock, size }, rawDt) => {
     const dt = Math.min(rawDt, 0.1);
-    const { near: talking, inspecting: focus, visited: lit, target: goal, show: on } = live.current;
+    const { near: talking, inspecting: focus, visited: lit, show: on } = live.current;
     const still = !!reduced?.matches;
     const t = clock.elapsedTime;
     const p = ctl.player.n;
@@ -162,8 +160,7 @@ export function Waypoints({ near, inspecting, visited, target, show }: Waypoints
     for (let i = 0; i < N; i++) {
       const id = STATIONS[i].id;
       const { n } = LANDMARKS[id];
-      const quest = id === goal;
-      done[i] += ((lit.has(id) && !quest ? 1 : 0) - done[i]) * Math.min(1, dt * 6);
+      done[i] += ((lit.has(id) ? 1 : 0) - done[i]) * Math.min(1, dt * 6);
       anchor.copy(n).multiplyScalar(roofs[i]);
       const open = ease(clearance(camera.position, anchor) / LIMB_FADE);
       // the arrow is what has to fit on screen, so test its tip rather than the roof
@@ -192,7 +189,7 @@ export function Waypoints({ near, inspecting, visited, target, show }: Waypoints
       dirX[i] = sx * size.width;
       dirY[i] = -sy * size.height;
       // a keeper's speech bubble owns the screen while it's up
-      dist[i] = roaming && v < 1 && !talking && !lit.has(id) && !quest ? arc(p, n) : Infinity;
+      dist[i] = roaming && v < 1 && !talking && !lit.has(id) ? arc(p, n) : Infinity;
 
       const g = tagGroups.current[i];
       const el = tags.current[i];
@@ -211,18 +208,16 @@ export function Waypoints({ near, inspecting, visited, target, show }: Waypoints
 
       if (!a || !c) continue;
       const bob = still ? 0 : Math.sin(t * 3 + i * 1.3) * 0.14 * (1 - done[i]);
-      const pulse = quest && !still ? 1 + Math.sin(t * 5) * 0.1 : 1;
-      const big = (quest ? 1.4 : 1) * pulse * v;
       m.makeBasis(camX, camY, camZ).setPosition(
         anchor
           .copy(n)
           .multiplyScalar(roofs[i])
-          .addScaledVector(camY, ARROW_UP + bob + (quest ? 0.15 : 0))
+          .addScaledVector(camY, ARROW_UP + bob)
           .addScaledVector(camX, slide),
       );
-      a.setMatrixAt(i, m.scale(s3.setScalar(big * (1 - done[i]) + 1e-4)));
+      a.setMatrixAt(i, m.scale(s3.setScalar(v * (1 - done[i]) + 1e-4)));
       // unvisited arrows breathe toward white, a soft glow without an emissive material
-      const glow = still ? 0.1 : (Math.sin(t * 2.4 + i) * 0.5 + 0.5) * (quest ? 0.35 : 0.2);
+      const glow = still ? 0.1 : (Math.sin(t * 2.4 + i) * 0.5 + 0.5) * 0.2;
       a.setColorAt(i, tint.copy(identity[i]).lerp(white, Math.max(glow, 1 - v)));
       m.makeBasis(camX, camY, camZ).setPosition(
         anchor.copy(n).multiplyScalar(roofs[i]).addScaledVector(camY, CHECK_UP).addScaledVector(camX, slide),
@@ -235,7 +230,7 @@ export function Waypoints({ near, inspecting, visited, target, show }: Waypoints
       c.instanceMatrix.needsUpdate = true;
     }
 
-    // keep only the target and the nearest few unvisited places, so the screen edge stays readable
+    // keep only the nearest few unvisited places, so the screen edge stays readable
     ranked.set(dist);
     const cut = ranked.sort()[NEAREST - 1];
     if (roaming && ++measured % 20 === 1) {
@@ -244,9 +239,8 @@ export function Waypoints({ near, inspecting, visited, target, show }: Waypoints
     for (let i = 0; i < N; i++) {
       const el = ctl.edges[i];
       if (!el) continue;
-      const id = STATIONS[i].id;
       const fade = 1 - vis[i];
-      const showEdge = roaming && !talking && fade > 0.02 && (id === goal || dist[i] <= cut);
+      const showEdge = roaming && !talking && fade > 0.02 && dist[i] <= cut;
       el.style.visibility = showEdge ? "visible" : "hidden";
       if (!showEdge) continue;
       el.style.opacity = fade.toFixed(2);
@@ -303,7 +297,6 @@ export function Waypoints({ near, inspecting, visited, target, show }: Waypoints
             station={s}
             near={near === s.id}
             lit={visited.has(s.id)}
-            quest={target === s.id}
             bind={(el) => {
               tags.current[i] = el;
             }}
@@ -356,23 +349,21 @@ interface TagProps {
   station: Station;
   near: boolean;
   lit: boolean;
-  quest: boolean;
   bind: (el: HTMLDivElement | null) => void;
 }
 
-function Tag({ station, near, lit, quest, bind }: TagProps) {
+function Tag({ station, near, lit, bind }: TagProps) {
   return (
     <Html center zIndexRange={[10, 0]} style={{ pointerEvents: "none" }}>
       <div
         ref={bind}
         style={{ opacity: 0 }}
         className={`flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-white px-2.5 py-1 text-[11px] font-medium text-black transition-[transform,border-color,opacity] max-sm:px-2 max-sm:text-[10px] ${
-          near ? "scale-110 border-hq-accent" : quest ? "border-hq-accent" : "border-hq-line"
+          near ? "scale-110 border-hq-accent" : "border-hq-line"
         }`}
       >
         {lit && <span className="size-1.5 rounded-full bg-hq-accent" />}
         {station.label}
-        {quest && <span className="text-[9px] font-semibold tracking-[0.12em] text-hq-accent uppercase">Today</span>}
       </div>
     </Html>
   );

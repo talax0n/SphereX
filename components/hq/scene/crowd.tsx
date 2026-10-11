@@ -184,7 +184,6 @@ function stepPlayer(f: Folk, dt: number, stuck: { t: number }): number {
   before.copy(p.n);
   move(f, dt, want > 0 ? dir : p.heading, ctl.north);
   const moved = arc(before, p.n);
-  if (want > 0) ctl.walked += moved;
   if (ctl.target && want > 0.6 && moved < want * dt * 0.25) {
     stuck.t += dt;
     if (stuck.t > 0.6) ctl.target = null;

@@ -34,7 +34,6 @@ function turn(yaw: number, pitch: number) {
 
 interface GlobeProps {
   visited: ReadonlySet<StationId>;
-  target: StationId | null;
   onTravel: (id: StationId) => void;
 }
 
@@ -42,7 +41,7 @@ interface GlobeProps {
  * The map: while mounted the camera orbits the whole planet. Dragging spins it with a little
  * inertia, and every landmark gets a label that travels there.
  */
-export function Globe({ visited, target, onTravel }: GlobeProps) {
+export function Globe({ visited, onTravel }: GlobeProps) {
   const gl = useThree((s) => s.gl);
   const els = useRef<(HTMLElement | null)[]>([]);
   const held = useRef(false);
@@ -126,7 +125,6 @@ export function Globe({ visited, target, onTravel }: GlobeProps) {
   return (
     <>
       {STATIONS.map((s, i) => {
-        const quest = s.id === target;
         const lit = visited.has(s.id);
         return (
           <Html key={s.id} position={anchors[i]} center zIndexRange={[30, 21]}>
@@ -136,19 +134,16 @@ export function Globe({ visited, target, onTravel }: GlobeProps) {
               }}
               type="button"
               onClick={() => onTravel(s.id)}
-              aria-label={`Go to ${s.label}${lit ? ", visited" : ""}${quest ? ", today's quest" : ""}`}
+              aria-label={`Go to ${s.label}${lit ? ", visited" : ""}`}
               style={{ opacity: 0, visibility: "hidden" }}
               className={cn(
                 "relative flex items-center gap-1.5 whitespace-nowrap rounded-full border bg-white font-medium text-hq-ink shadow-[0_6px_16px_-10px_rgba(0,0,0,0.35)] transition-[border-color,transform] hover:scale-105 hover:border-hq-accent pointer-coarse:after:absolute pointer-coarse:after:-inset-2",
-                quest
-                  ? "border-hq-accent px-3 py-1.5 text-[13px] max-sm:px-2.5 max-sm:py-1 max-sm:text-[12px]"
-                  : "border-hq-line px-2.5 py-1 text-[11px] max-sm:px-2 max-sm:text-[10px]",
+                "border-hq-line px-2.5 py-1 text-[11px] max-sm:px-2 max-sm:text-[10px]",
               )}
             >
               <span className="size-2 shrink-0 rounded-full" style={{ background: IDENTITY[s.id].top }} />
               {s.label}
               {lit && <Check className="size-3 text-hq-accent" strokeWidth={3} aria-hidden />}
-              {quest && <span className="text-[9px] font-semibold tracking-[0.12em] text-hq-accent uppercase">Today</span>}
             </button>
           </Html>
         );

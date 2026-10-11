@@ -18,8 +18,8 @@ export const INTRO: readonly IntroLine[] = [
     gesture: "point",
   },
   {
-    text: `Light up all ${STATIONS.length} and try today's 3 quests. Anyone falling from the sky is one of my AI agents clocking in. Press M for the map.`,
-    touch: `Light up all ${STATIONS.length} and try today's 3 quests. Anyone falling from the sky is one of my AI agents clocking in. Tap the corner map.`,
+    text: `Light up all ${STATIONS.length}. Anyone falling from the sky is one of my AI agents clocking in. Press M for the map.`,
+    touch: `Light up all ${STATIONS.length}. Anyone falling from the sky is one of my AI agents clocking in. Tap the corner map.`,
     gesture: "cheer",
   },
   {
