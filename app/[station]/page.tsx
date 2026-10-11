@@ -20,6 +20,7 @@ const SUMMARY: Record<StationId, string> = {
   github: "A year of GitHub contributions, streaks and the repos I work in.",
   contact: `Want to build something together? Write to ${PROFILE.email}.`,
   updates: `What's new on the planet. Latest: v${CHANGELOG[0].version}, ${CHANGELOG[0].title}.`,
+  guestbook: "Notes visitors pinned on the board. Leave one of your own.",
 };
 
 export function generateStaticParams() {

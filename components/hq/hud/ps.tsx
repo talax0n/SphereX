@@ -4,8 +4,8 @@ import { type Pulse, ago, say } from "@/data/pulse";
 
 const DAY = 86_400_000;
 
-/** The live-agents pill under the wordmark; click it (or press `) for a tiny `ps` of the sessions, with a way to go watch them. */
-export function Ps({ pulse, onWatch }: { pulse: Pulse; onWatch: () => void }) {
+/** The live-agents pill under the wordmark; click it (or press `) for a tiny `ps` of the sessions */
+export function Ps({ pulse }: { pulse: Pulse }) {
   const [open, setOpen] = useState(false);
   const [now, setNow] = useState(Date.now);
 
@@ -28,10 +28,6 @@ export function Ps({ pulse, onWatch }: { pulse: Pulse; onWatch: () => void }) {
   const toggle = () => {
     setNow(Date.now());
     setOpen((o) => !o);
-  };
-  const watch = () => {
-    setOpen(false);
-    onWatch();
   };
 
   return (
@@ -88,13 +84,6 @@ export function Ps({ pulse, onWatch }: { pulse: Pulse; onWatch: () => void }) {
             <p className="text-hq-mute">
               {runsToday} runs today{lastSeen > 0 && ` · seen ${ago(Math.max(0, now - lastSeen))}`}
             </p>
-            <button
-              type="button"
-              onClick={watch}
-              className="mt-2 rounded-full border border-hq-line bg-white px-3 py-1 font-sans text-[11px] font-semibold text-hq-accent transition-colors hover:bg-hq-bg max-sm:py-2"
-            >
-              Go watch →
-            </button>
           </motion.div>
         )}
       </AnimatePresence>

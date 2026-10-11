@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useState, useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -12,13 +13,13 @@ import { EdgeArrows, MapChrome, Minimap } from "./hud/map";
 import { Sky } from "./sky";
 import { Book } from "./hud/book";
 import { JumpButton, Stick } from "./hud/stick";
-import { IntroControls } from "./scene/intro";
+import { IntroControls, IntroPlaceholder } from "./hud/intro";
 import { useHQ } from "./use-hq";
 import { usePulse } from "./use-pulse";
 import { useRoom } from "./use-room";
-import { useStones } from "./use-stones";
-import { LeaveStone } from "./hud/stone";
 import type { StationId } from "@/data/stations";
+
+const noop = () => () => {};
 
 // The DOM shell paints first; three.js loads behind a plain placeholder.
 const Scene = dynamic(() => import("./scene/scene"), {
@@ -35,33 +36,45 @@ export function HQ({ start }: { start?: StationId }) {
   const map = state.mode === "map";
   const { pulse } = usePulse();
   const room = useRoom(!intro);
-  const rocks = useStones(room);
-  const shown = toast ?? rocks.note;
+  // before hydration nobody knows yet whether this visitor has seen the intro, so the server renders its first
+  // line and an inline script in the layout hides it for returning visitors
+  const booted = useSyncExternalStore(noop, () => true, () => false);
+  const pre = !booted && !start;
+  const onboarding = pre || state.mode === "onboarding";
+  const step = state.mode === "onboarding" ? state.step : 0;
+  const [planetBubble, setPlanetBubble] = useState(false);
+  const onBubbleShown = useCallback(() => setPlanetBubble(true), []);
 
   return (
     <main className="relative h-dvh w-full overflow-hidden">
       <Sky />
-      <Scene state={state} room={room} stones={rocks.stones} onTravel={travel} onOpen={open} onNext={next} onSkip={skip} />
+      <Scene
+        state={state}
+        room={room}
+        onTravel={travel}
+        onOpen={open}
+        onNext={next}
+        onSkip={skip}
+        onBubbleShown={onBubbleShown}
+        bubbleAppear={planetBubble}
+      />
+      {onboarding && !planetBubble && <IntroPlaceholder pre={pre} step={step} onNext={next} onSkip={skip} />}
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between p-4 sm:p-6">
         <div data-hud className={cn("transition-opacity duration-500", map && "max-sm:opacity-0")}>
           <Wordmark />
-          {!intro && !map && <Ps pulse={pulse} onWatch={() => travel("projects")} />}
+          {!intro && !map && <Ps pulse={pulse} />}
         </div>
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 top-20 z-30 flex justify-center px-3 max-sm:top-44">
-        <AnimatePresence>{shown && <Toast key={shown.id} text={shown.text} />}</AnimatePresence>
+        <AnimatePresence>{toast && <Toast key={toast.id} text={toast.text} />}</AnimatePresence>
       </div>
 
-      {state.mode === "onboarding" && (
-        <IntroControls
-          bar
-          step={state.step}
-          onNext={next}
-          onSkip={skip}
-          className="absolute inset-x-0 bottom-0 z-30 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:hidden"
-        />
+      {onboarding && (
+        <div data-intro-pre={pre || undefined} className="absolute inset-x-0 bottom-0 z-30 px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] sm:hidden">
+          <IntroControls bar step={step} onNext={next} onSkip={skip} />
+        </div>
       )}
       {!intro && (
         <div
@@ -78,7 +91,6 @@ export function HQ({ start }: { start?: StationId }) {
         <div data-hud className="absolute bottom-20 left-5 z-20 flex items-end gap-1.5 max-sm:bottom-auto max-sm:left-3 max-sm:top-32 sm:pointer-coarse:bottom-5">
           <Hint />
           <Replay onReplay={replay} />
-          {!rocks.left && <LeaveStone onLeave={rocks.leave} />}
         </div>
       )}
 
@@ -104,7 +116,7 @@ export function HQ({ start }: { start?: StationId }) {
       <AnimatePresence>
         {state.mode === "inspecting" && <Book key={state.station} id={state.station} onClose={close} />}
       </AnimatePresence>
-      <Knock room={room} exploring={state.mode === "exploring"} onLetter={() => open("contact")} />
+      <Knock room={room} exploring={state.mode === "exploring"} />
       <Cheat room={room} />
     </main>
   );

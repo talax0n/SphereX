@@ -5,6 +5,7 @@ import { AwardsPanel } from "./awards";
 import { ContactPanel } from "./contact";
 import { ExperiencePanel } from "./experience";
 import { GithubPanel } from "./github";
+import { GuestbookPanel } from "./guestbook";
 import { PROJECT_PAGES } from "./projects";
 import { SkillsPanel } from "./skills";
 import { UpdatesPanel } from "./updates";
@@ -19,4 +20,5 @@ export const BOOKS: Record<StationId, readonly ComponentType[]> = {
   github: [GithubPanel],
   contact: [ContactPanel],
   updates: [UpdatesPanel],
+  guestbook: [GuestbookPanel],
 };

@@ -15,7 +15,7 @@ import { ctl, setPing, setTarget } from "../game";
 import { keyLight } from "./daylight";
 import { RADIUS } from "./folk";
 import { lampHits, toggleLamp } from "./lamps";
-import { introScale } from "./intro";
+import { introScale } from "../hud/intro";
 import { DENY, MOVE } from "./ping";
 import { LANDMARKS, R, blocked, flatten, plinthAt } from "./planet";
 

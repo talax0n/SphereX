@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import type { StationId } from "@/data/stations";
-import type { Stone } from "@/data/stones";
 import type { GameState } from "../game";
 import { CameraRig, ClickToMove } from "./camera";
 import { Agents } from "./agents";
@@ -20,7 +19,6 @@ import type { Room } from "../use-room";
 import { MinimapView } from "./minimap";
 import { Ping } from "./ping";
 import { Speech } from "./speech";
-import { Stones } from "./stones";
 import { Waypoints } from "./waypoints";
 import { World } from "./world";
 import { Rigs, Screens } from "./workplaces";
@@ -28,15 +26,20 @@ import { Rigs, Screens } from "./workplaces";
 interface SceneProps {
   state: GameState;
   room: Room;
-  stones: Stone[];
   onTravel: (id: StationId) => void;
   onOpen: (id: StationId) => void;
   onNext: () => void;
   onSkip: () => void;
+  onBubbleShown: () => void;
+  /** false while the HTML placeholder still shows the intro, so the planet's bubbles take over without popping in */
+  bubbleAppear: boolean;
 }
 
-export default function Scene({ state, room, stones, onTravel, onOpen, onNext, onSkip }: SceneProps) {
-  const [dpr, setDpr] = useState(1.5);
+// Phones already draw at 2-3x density; past 1.25 the clay looks the same and the GPU pays for every extra pixel.
+const MAX_DPR = window.matchMedia("(pointer: coarse)").matches ? 1.25 : 1.5;
+
+export default function Scene({ state, room, onTravel, onOpen, onNext, onSkip, onBubbleShown, bubbleAppear }: SceneProps) {
+  const [dpr, setDpr] = useState(MAX_DPR);
   const near = state.mode === "exploring" ? state.near : null;
   const inspecting = state.mode === "inspecting" ? state.station : null;
   return (
@@ -48,7 +51,7 @@ export default function Scene({ state, room, stones, onTravel, onOpen, onNext, o
       // clip, not hidden: focusing a button in an <Html> bubble would otherwise scroll the whole canvas away
       style={{ position: "absolute", inset: 0, touchAction: "none", overflow: "clip" }}
     >
-      <PerformanceMonitor onChange={({ factor }) => setDpr(1 + 0.5 * factor)} />
+      <PerformanceMonitor onChange={({ factor }) => setDpr(1 + (MAX_DPR - 1) * factor)} />
       <Daylight />
       <Earth />
       <World near={near} inspecting={inspecting} visited={state.visited} />
@@ -64,10 +67,11 @@ export default function Scene({ state, room, stones, onTravel, onOpen, onNext, o
       <GithubGrid />
       <Crowd near={near} onOpen={onOpen} />
       <Agents />
-      <Stones stones={stones} />
       <Speech lines={room.lines} names={room.names} me={room.me} kings={room.kings} onMute={room.mute} />
       {state.mode === "map" && <Globe visited={state.visited} onTravel={onTravel} />}
-      {state.mode === "onboarding" && <IntroBubble step={state.step} onNext={onNext} onSkip={onSkip} />}
+      {state.mode === "onboarding" && (
+        <IntroBubble step={state.step} onNext={onNext} onSkip={onSkip} onShown={onBubbleShown} appear={bubbleAppear} />
+      )}
       <Ping />
       <Confetti />
       <CameraRig />

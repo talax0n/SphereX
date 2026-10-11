@@ -10,7 +10,8 @@ export type StationId =
   | "awards"
   | "github"
   | "contact"
-  | "updates";
+  | "updates"
+  | "guestbook";
 
 export interface Station {
   id: StationId;
@@ -32,6 +33,7 @@ export const STATIONS: readonly Station[] = [
   { id: "github", label: "GitHub", hotkey: "6", at: [72, 245], line: "Every cube is a day of commits. It's getting tall." },
   { id: "contact", label: "Contact", hotkey: "7", at: [70, 345], line: "Want to build something together? Leave Theo a letter." },
   { id: "updates", label: "Updates", hotkey: "8", at: [26, 20], line: `Fresh off the press: v${CHANGELOG[0].version}. Read the board.` },
+  { id: "guestbook", label: "Guestbook", hotkey: "9", at: [42, 62], line: "Say something nice and pin it up. Theo reads every note." },
 ];
 
 export const STATION_BY_ID = Object.fromEntries(

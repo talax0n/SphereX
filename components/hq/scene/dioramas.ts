@@ -25,6 +25,7 @@ export const IDENTITY: Record<StationId, Identity> = {
   github: { wall: "#f4a99a", top: "#c9624f" },
   contact: { wall: "#bcd3a8", top: "#e9776a" },
   updates: { wall: "#f1d3a0", top: "#d9534f" },
+  guestbook: { wall: "#f7c9d4", top: "#c65b7c" },
 };
 
 /** Plinth edge per station; projects is the agents' HQ, wide enough for an office, a gym and a nap corner. */
@@ -37,6 +38,7 @@ export const PLINTH_SIZE: Record<StationId, number> = {
   github: 3.2,
   contact: 3.2,
   updates: 3.2,
+  guestbook: 3.2,
 };
 export const PLINTH_HEIGHT = 0.4;
 /** The plinth runs this far below the ground so its corners stay buried where the planet curves away, even the HQ's. */
@@ -52,6 +54,7 @@ export const STAIRS: Record<StationId, number> = {
   github: 0.5,
   contact: 0.6,
   updates: -0.3,
+  guestbook: 0.4,
 };
 export const STAIR_W = 0.9;
 export const STEPS = 3;
@@ -136,6 +139,12 @@ export const SOLIDS: Record<StationId, Rect[]> = {
     around(1.4, -1.1, 0.07),
     [-0.6, 0.3, 0.2, 0.6],
     around(-1.15, 0.6, 0.18),
+  ],
+  guestbook: [
+    [-1.3, -1.05, 1.3, -0.85],
+    [-1.15, 0.05, -0.35, 0.55],
+    around(1.35, -0.2, 0.07),
+    around(-1.4, -1.35, 0.07),
   ],
 };
 const H = Math.PI / 2;
@@ -809,6 +818,48 @@ function updates({ top }: Identity): Part[] {
   ];
 }
 
+/** The guestbook: a big cork board crowded with visitors' notes, a writing desk with paper and pen, and a stool. */
+function guestbook({ wall, top }: Identity): Part[] {
+  const papers = ["#fbfaf7", "#fff1a8", "#cfe8f6", "#fbd5d0", "#d9ecc4"];
+  const pins = ["#f29a83", "#8cc6e6", "#f2c14e", top];
+  const notes: Part[] = [];
+  for (let r = 0; r < 3; r++)
+    for (let c = 0; c < 6; c++) {
+      const k = r * 6 + c;
+      const x = -1.0 + c * 0.4 + Math.sin(k * 2.3) * 0.05;
+      const y = 1.55 - r * 0.36 + Math.cos(k * 1.7) * 0.03;
+      const tilt = Math.sin(k * 3.1) * 0.14;
+      notes.push(
+        part(box(0.28, 0.24, 0.015, 0.008), [x, y, -0.88], { rot: [0, 0, tilt], tone: papers[k % papers.length] }),
+        part(box(0.18, 0.018, 0.005, 0.002), [x, y + 0.02, -0.87], { rot: [0, 0, tilt], tone: mid }),
+        part(ball(0.03, 8, 6), [x, y + 0.09, -0.86], { tone: pins[k % pins.length] }),
+      );
+    }
+  return [
+    part(box(2.9, 0.03, 0.8, 0.01), [0, 0.015, -0.85], { tone: light, surf: "stone" }),
+    ...[-1.38, 1.38].map((x) => part(box(0.14, 2.05, 0.14, 0.04), [x, 1.02, -0.95], { tone: top, surf: "wood" })),
+    part(box(2.62, 1.2, 0.1, 0.04), [0, 1.2, -0.95], { tone: wall, surf: "wood" }),
+    part(box(2.46, 1.06, 0.04, 0.02), [0, 1.2, -0.89], { tone: "#c99a6b", surf: "fabric" }),
+    ...notes,
+    // a heart on the crest
+    ...[-0.07, 0.07].map((x) => part(ball(0.1, 10, 8), [x, 2.02, -0.95], { scale: [1, 1, 0.4], tone: top })),
+    part(box(0.16, 0.16, 0.06, 0.02), [0, 1.96, -0.95], { rot: [0, 0, Math.PI / 4], tone: top }),
+    // the writing desk, its paper, an inkpot and a quill
+    part(box(0.8, 0.05, 0.5, 0.02), [-0.75, 0.55, 0.3], { tone: wood, surf: "wood" }),
+    ...[[-1.1, 0.1], [-0.4, 0.1], [-1.1, 0.5], [-0.4, 0.5]].map(([x, z]) => part(box(0.05, 0.53, 0.05, 0.01), [x, 0.265, z], { tone: woodDark, surf: "wood" })),
+    part(box(0.26, 0.01, 0.2, 0.005), [-0.8, 0.585, 0.32], { rot: [0, 0.2, 0], tone: white }),
+    part(box(0.22, 0.01, 0.18, 0.005), [-0.62, 0.59, 0.25], { rot: [0, -0.3, 0], tone: "#fff1a8" }),
+    part(cyl(0.04, 0.05, 0.07), [-0.5, 0.61, 0.42], { tone: slate, surf: "metal" }),
+    part(cyl(0.006, 0.006, 0.22), [-0.48, 0.7, 0.42], { rot: [0, 0, -0.4], tone: top }),
+    part(cyl(0.12, 0.12, 0.04), [-0.75, 0.32, 0.85], { tone: top, surf: "wood" }),
+    part(cyl(0.03, 0.03, 0.3), [-0.75, 0.15, 0.85], { tone: woodDark, surf: "wood" }),
+    ...lantern([1.35, 0, -0.2], 0.85, top),
+    ...lantern([-1.4, 0, -1.35], 0.85, top),
+    ...parkBench([0.65, 0, 0.55], Math.PI),
+    ...flowers([0.2, 0, -0.35], [1.45, 0, -0.3], 10, 13),
+  ];
+}
+
 const BUILDERS: Record<StationId, (c: Identity) => Part[]> = {
   about,
   projects,
@@ -818,6 +869,7 @@ const BUILDERS: Record<StationId, (c: Identity) => Part[]> = {
   github,
   contact,
   updates,
+  guestbook,
 };
 
 export function buildStation(id: StationId): BufferGeometry {

@@ -793,6 +793,8 @@ export const UNIFORM: Record<StationId, Partial<Look> & { prop: Item<Prop> }> = 
   contact: { hat: item("newsboy", "#6d7a94"), back: item("satchel", BAG[1]), prop: item("envelope", PLAIN) },
   // fresh off the press
   updates: { hat: item("paper", PAPER[0]), neck: item("bowtie", TIE[0]), prop: item("newspaper", PLAIN) },
+  // keeps the pins and the pens
+  guestbook: { hat: item("beanie", IDENTITY.guestbook.top), neck: item("scarf", NECK[0]), prop: item("envelope", PLAIN) },
 };
 
 /** The looping job each keeper does with their prop. */
@@ -805,6 +807,7 @@ export const CHORE: Record<StationId, Gesture> = {
   github: "sip",
   contact: "sort",
   updates: "read",
+  guestbook: "sort",
 };
 
 const TALL: readonly Hair[] = ["spiky", "bun", "curly"];

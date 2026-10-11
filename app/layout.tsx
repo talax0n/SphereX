@@ -6,7 +6,6 @@ const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   weight: ["300", "400", "600"],
-  style: ["normal", "italic"],
 });
 
 const syne = Syne({
@@ -26,6 +25,8 @@ export const metadata: Metadata = {
   twitter: { card: "summary", title: "Theo Niomba · Fullstack Engineer", description },
 };
 
+const INTRO_SEEN = `try{localStorage.getItem("hq:intro")==="1"&&(document.documentElement.dataset.introSeen="")}catch(e){}`;
+
 export const viewport = {
   width: "device-width",
   initialScale: 1,
@@ -38,7 +39,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${syne.variable}`}>
+    // the script flags returning visitors before first paint, so the server-rendered intro never flashes for them
+    <html lang="en" className={`${inter.variable} ${syne.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: INTRO_SEEN }} />
+      </head>
       <body>{children}</body>
     </html>
   );

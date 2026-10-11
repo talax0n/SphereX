@@ -133,9 +133,24 @@ export const gable = (w: number, h: number, d: number) =>
 
 export const part = (geo: BufferGeometry, pos: Vec3, opts: PartOpts = {}): Part => ({ geo, pos, opts });
 
-/** Only position, normal, colour and surface survive a merge, so every source geometry lines up. */
-function strip(g: BufferGeometry) {
-  for (const k of Object.keys(g.attributes)) if (k !== "position" && k !== "normal") g.deleteAttribute(k);
+/**
+ * Only position and normal survive a merge (paint adds colour and surface), so every source geometry lines up.
+ * Copies just the vertex data: `clone()` would first rebuild a default RoundedBoxGeometry or SphereGeometry to copy into.
+ */
+function bare(geo: BufferGeometry) {
+  const g = new BufferGeometry();
+  for (const k of ["position", "normal"]) {
+    const a = geo.getAttribute(k);
+    if (a) g.setAttribute(k, a.clone());
+  }
+  return g;
+}
+
+// Shapes are shared, so the same sphere or box is merged hundreds of times; unroll it once.
+const flat = new WeakMap<BufferGeometry, BufferGeometry>();
+function flattened(geo: BufferGeometry) {
+  let g = flat.get(geo);
+  if (!g) flat.set(geo, (g = bare(geo.index ? geo.toNonIndexed() : geo)));
   return g;
 }
 
@@ -148,7 +163,7 @@ export function merge(parts: Part[], at: Vec3 = [0, 0, 0]): BufferGeometry {
   const baked = parts.map(({ geo, pos, opts }) => {
     q.setFromEuler(new Euler(...(opts.rot ?? [0, 0, 0])));
     m.compose(new Vector3(pos[0] + at[0], pos[1] + at[1], pos[2] + at[2]), q, opts.scale ? new Vector3(...opts.scale) : one);
-    return paint(strip(geo.index ? geo.toNonIndexed() : geo.clone()), opts.tone ?? TONE.white, opts.surf).applyMatrix4(m);
+    return paint(bare(flattened(geo)), opts.tone ?? TONE.white, opts.surf).applyMatrix4(m);
   });
   const out = mergeGeometries(baked, false);
   baked.forEach((g) => g.dispose());

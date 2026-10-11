@@ -23,6 +23,10 @@ body {
   font-family: var(--font-inter), sans-serif;
 }
 
+[data-intro-seen] [data-intro-pre] {
+  display: none;
+}
+
 ::selection {
   background: #2b3cff;
   color: #ffffff;
