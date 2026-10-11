@@ -1,30 +1,18 @@
 import { timingSafeEqual } from "node:crypto";
 import { type Pulse, parsePulse } from "@/data/pulse";
+import { hasRedis, redis } from "@/lib/redis";
 
 const KEY = "pulse";
 /** a laptop that stopped reporting two minutes ago is asleep, whatever it last said */
 const STALE_MS = 120_000;
 const EMPTY: Pulse = { agents: [], lastSeen: 0, runsToday: 0 };
 
-const REST_URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
-const TOKEN = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
 /** dev only: serverless instances don't share it; on globalThis so dev recompiles keep it */
 const mem = globalThis as { pulseMemory?: string };
 
-async function redis(...cmd: string[]): Promise<string | null> {
-  const res = await fetch(REST_URL!, {
-    method: "POST",
-    headers: { authorization: `Bearer ${TOKEN}` },
-    body: JSON.stringify(cmd),
-    cache: "no-store",
-  });
-  if (!res.ok) throw new Error(`redis ${res.status}`);
-  return ((await res.json()) as { result: string | null }).result;
-}
-
-const load = async () => (REST_URL && TOKEN ? redis("GET", KEY) : (mem.pulseMemory ?? null));
+const load = async () => (hasRedis ? redis("GET", KEY) : (mem.pulseMemory ?? null));
 const save = async (json: string) => {
-  if (REST_URL && TOKEN) await redis("SET", KEY, json);
+  if (hasRedis) await redis("SET", KEY, json);
   else mem.pulseMemory = json;
 };
 

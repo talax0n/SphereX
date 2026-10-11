@@ -16,6 +16,8 @@ import { IntroControls } from "./scene/intro";
 import { useHQ } from "./use-hq";
 import { usePulse } from "./use-pulse";
 import { useRoom } from "./use-room";
+import { useStones } from "./use-stones";
+import { LeaveStone } from "./hud/stone";
 import type { StationId } from "@/data/stations";
 
 // The DOM shell paints first; three.js loads behind a plain placeholder.
@@ -33,11 +35,13 @@ export function HQ({ start }: { start?: StationId }) {
   const map = state.mode === "map";
   const { pulse } = usePulse();
   const room = useRoom(!intro);
+  const rocks = useStones(room);
+  const shown = toast ?? rocks.note;
 
   return (
     <main className="relative h-dvh w-full overflow-hidden">
       <Sky />
-      <Scene state={state} room={room} onTravel={travel} onOpen={open} onNext={next} onSkip={skip} />
+      <Scene state={state} room={room} stones={rocks.stones} onTravel={travel} onOpen={open} onNext={next} onSkip={skip} />
 
       <div className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between p-4 sm:p-6">
         <div data-hud className={cn("transition-opacity duration-500", map && "max-sm:opacity-0")}>
@@ -47,7 +51,7 @@ export function HQ({ start }: { start?: StationId }) {
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 top-20 z-30 flex justify-center px-3 max-sm:top-44">
-        <AnimatePresence>{toast && <Toast key={toast.id} text={toast.text} />}</AnimatePresence>
+        <AnimatePresence>{shown && <Toast key={shown.id} text={shown.text} />}</AnimatePresence>
       </div>
 
       {state.mode === "onboarding" && (
@@ -74,6 +78,7 @@ export function HQ({ start }: { start?: StationId }) {
         <div data-hud className="absolute bottom-20 left-5 z-20 flex items-end gap-1.5 max-sm:bottom-auto max-sm:left-3 max-sm:top-32 sm:pointer-coarse:bottom-5">
           <Hint />
           <Replay onReplay={replay} />
+          {!rocks.left && <LeaveStone onLeave={rocks.leave} />}
         </div>
       )}
 

@@ -20,6 +20,8 @@ export const CHANGELOG: Release[] = [
       "When I'm away, the same button takes you to my letterbox instead.",
       "A live pill up top tells you when my AI agents are building right now.",
       "Tap it to see what they are working on, and walk over to watch them.",
+      "You can leave a little signed stone on the planet, and it stays there for everyone to find.",
+      "Walk near other people's stones to read their names.",
       "The daily quests and streaks are gone, so the screen is calmer.",
     ],
   },

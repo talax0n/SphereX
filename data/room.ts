@@ -101,7 +101,7 @@ export function cleanName(raw: unknown): string | null {
 
 const q3 = (x: number) => Math.round(x * 1000) / 1000;
 
-function vec(x: unknown): Vec | null {
+export function vec(x: unknown): Vec | null {
   if (!Array.isArray(x) || x.length !== 3) return null;
   if (!x.every((c) => typeof c === "number" && Number.isFinite(c) && Math.abs(c) <= 1)) return null;
   const [a, b, c] = x as Vec;

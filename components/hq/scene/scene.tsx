@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import type { StationId } from "@/data/stations";
+import type { Stone } from "@/data/stones";
 import type { GameState } from "../game";
 import { CameraRig, ClickToMove } from "./camera";
 import { Agents } from "./agents";
@@ -19,6 +20,7 @@ import type { Room } from "../use-room";
 import { MinimapView } from "./minimap";
 import { Ping } from "./ping";
 import { Speech } from "./speech";
+import { Stones } from "./stones";
 import { Waypoints } from "./waypoints";
 import { World } from "./world";
 import { Rigs, Screens } from "./workplaces";
@@ -26,13 +28,14 @@ import { Rigs, Screens } from "./workplaces";
 interface SceneProps {
   state: GameState;
   room: Room;
+  stones: Stone[];
   onTravel: (id: StationId) => void;
   onOpen: (id: StationId) => void;
   onNext: () => void;
   onSkip: () => void;
 }
 
-export default function Scene({ state, room, onTravel, onOpen, onNext, onSkip }: SceneProps) {
+export default function Scene({ state, room, stones, onTravel, onOpen, onNext, onSkip }: SceneProps) {
   const [dpr, setDpr] = useState(1.5);
   const near = state.mode === "exploring" ? state.near : null;
   const inspecting = state.mode === "inspecting" ? state.station : null;
@@ -61,6 +64,7 @@ export default function Scene({ state, room, onTravel, onOpen, onNext, onSkip }:
       <GithubGrid />
       <Crowd near={near} onOpen={onOpen} />
       <Agents />
+      <Stones stones={stones} />
       <Speech lines={room.lines} names={room.names} me={room.me} kings={room.kings} onMute={room.mute} />
       {state.mode === "map" && <Globe visited={state.visited} onTravel={onTravel} />}
       {state.mode === "onboarding" && <IntroBubble step={state.step} onNext={onNext} onSkip={onSkip} />}
