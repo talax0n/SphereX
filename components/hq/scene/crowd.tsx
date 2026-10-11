@@ -391,6 +391,11 @@ const bind = Object.fromEntries(
 
 /** What each folk has on, by index; the frame loop only poses these. */
 const kit: Wear[][] = folk.map(() => []);
+/** who each instance slot is dressed as; -1 forces a re-dress */
+const slotFolk = folk.map(() => -1);
+/** a little over head height, with room for hats, raised arms and hops */
+const TALL_AS = 2.5;
+const toCam = new Vector3();
 /** wearers of each kind on screen this frame; a kind nobody wears isn't drawn */
 const used = new Set<Wear>();
 
@@ -418,32 +423,41 @@ export function Crowd({ near, onOpen }: CrowdProps) {
 
   useEffect(() => {
     for (const k of KINDS) for (let i = 0; i < N; i++) meshes[k]?.setMatrixAt(i, NONE);
-    folk.forEach((f, i) => dress(i, f));
+    folk.forEach((f, i) => {
+      dress(i, f);
+      slotFolk[i] = i;
+    });
   }, []);
 
-  useFrame((_, rawDt) => {
+  useFrame(({ camera }, rawDt) => {
     const dt = Math.min(rawDt, 0.1) * TIME_SCALE;
     const { head, body, nub, blob } = meshes;
     if (!head || !body || !nub || !blob) return;
     for (const k of KINDS) if (!meshes[k]) return;
     if (crowned.current !== ctl.king) {
       crowned.current = ctl.king;
-      dress(0, Object.assign(folk[0], dressUp(PLAYER, ctl.king ? KING : {})));
+      Object.assign(folk[0], dressUp(PLAYER, ctl.king ? KING : {}));
+      slotFolk[0] = -1;
     }
 
+    // Everyone past the horizon is hidden by the planet, so only the people who could be seen get an instance
+    // slot, packed from 0 so the draw stops at `count`. The player is folk 0 and always slot 0.
+    const dist = camera.position.length();
+    const horizon = Math.cos(Math.acos(Math.min(1, R / dist)) + Math.acos(R / (R + TALL_AS)));
+    toCam.copy(camera.position).divideScalar(dist);
+    let slots = 0;
     used.clear();
     for (let i = 0; i < N; i++) {
       const f = folk[i];
+      let fresh = false;
       if (f.kind === "visitor" && f.fresh && f.shown) {
         Object.assign(f, dressUp(lookOf(f.look), f.king ? KING : {}));
-        dress(i, f);
+        fresh = true;
+        // a slot they held before going past the horizon still wears the old look
+        const was = slotFolk.indexOf(i);
+        if (was >= 0) slotFolk[was] = -1;
       }
-      if ((f.kind === "villager" || f.kind === "visitor") && !f.shown) {
-        for (const m of [head, body, blob]) m.setMatrixAt(i, NONE);
-        for (let k = 0; k < NUBS; k++) nub.setMatrixAt(i * NUBS + k, NONE);
-        for (const k of kit[i]) meshes[k]?.setMatrixAt(i, NONE);
-        continue;
-      }
+      if ((f.kind === "villager" || f.kind === "visitor") && !f.shown) continue;
       let turn = 0;
       let lift = 0;
       /** what the shadow sits on: the ground, or a plinth top for a villager standing on one */
@@ -473,18 +487,26 @@ export function Crowd({ near, onOpen }: CrowdProps) {
         turn = f.turn;
       }
       animate(f, dt, turn);
+      // falling villagers are up in the sky, clear of the horizon
+      const falling = f.kind === "villager" && f.alt > 0;
+      if (i > 0 && !falling && f.n.dot(toCam) < horizon) continue;
+      const slot = slots++;
+      if (fresh || slotFolk[slot] !== i) {
+        dress(slot, f);
+        slotFolk[slot] = i;
+      }
       const g = poseFor(f);
       const step = pose(f, g, i, lift);
 
       const flail = f.kind === "player" ? drop.flail : f.kind === "villager" && f.alt > 0 ? 1 : 0;
       limbs(base, torso, g, step, f.amp, flail, drop.t * 26 + i, rig);
-      for (let k = 0; k < NUBS; k++) nub.setMatrixAt(i * NUBS + k, rig[k]);
+      for (let k = 0; k < NUBS; k++) nub.setMatrixAt(slot * NUBS + k, rig[k]);
       const nod = skull(torso, f.head, g.headYaw, headM);
-      head.setMatrixAt(i, nod);
-      body.setMatrixAt(i, torso);
-      for (const k of kit[i]) {
+      head.setMatrixAt(slot, nod);
+      body.setMatrixAt(slot, torso);
+      for (const k of kit[slot]) {
         const bone = WEAR[k].bone;
-        meshes[k]?.setMatrixAt(i, bone === "head" ? nod : bone === "hand" ? rig[6] : torso);
+        meshes[k]?.setMatrixAt(slot, bone === "head" ? nod : bone === "hand" ? rig[6] : torso);
         used.add(k);
       }
 
@@ -497,7 +519,7 @@ export function Crowd({ near, onOpen }: CrowdProps) {
       const dry = f.kind === "player" ? +!self.wet : f.kind === "visitor" ? +!swimming(f.n) : 1;
       const shade = 1.15 * (1 - Math.min(0.45, (lift - floor) * 0.13)) * (1 - g.lie) * dry;
       local.compose(v.set(0, 0.02, 0), q.identity(), s.set(shade, 1, shade));
-      blob.setMatrixAt(i, local.premultiply(base));
+      blob.setMatrixAt(slot, local.premultiply(base));
       if (f.kind === "player" && halo.current) {
         halo.current.visible = ctl.intro === "ground";
         frameAt(f.n, f.heading, halo.current.matrix, (depthAt(f.n) > 0 ? Math.max(self.ground, SEA_LEVEL) : self.ground) + 0.04);
@@ -523,7 +545,11 @@ export function Crowd({ near, onOpen }: CrowdProps) {
     }
 
     for (const k of KINDS) if (meshes[k]) meshes[k].visible = used.has(k);
-    for (const mesh of Object.values(meshes)) if (mesh) mesh.instanceMatrix.needsUpdate = true;
+    for (const [k, mesh] of Object.entries(meshes)) {
+      if (!mesh) continue;
+      mesh.count = k === "nub" ? slots * NUBS : slots;
+      mesh.instanceMatrix.needsUpdate = true;
+    }
   });
 
   const keeperHead = near && LANDMARKS[near].keeper.clone().multiplyScalar(R + 1.15);

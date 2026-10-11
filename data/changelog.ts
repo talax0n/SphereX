@@ -23,6 +23,8 @@ export const CHANGELOG: Release[] = [
       "The daily quests and streaks are gone, so the screen is calmer.",
       "On phones, my hello shows up right away instead of waiting for the planet to load.",
       "The planet builds faster and is easier on your phone's battery.",
+      "The planet loads in small steps now, so the page stays responsive while it builds.",
+      "Your phone only draws the people on your side of the planet, so it runs cooler.",
     ],
   },
   {

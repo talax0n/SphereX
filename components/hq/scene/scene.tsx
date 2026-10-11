@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import type { StationId } from "@/data/stations";
@@ -20,7 +20,7 @@ import { MinimapView } from "./minimap";
 import { Ping } from "./ping";
 import { Speech } from "./speech";
 import { Waypoints } from "./waypoints";
-import { World } from "./world";
+import { Ground, World } from "./world";
 import { Rigs, Screens } from "./workplaces";
 
 interface SceneProps {
@@ -40,6 +40,14 @@ const MAX_DPR = window.matchMedia("(pointer: coarse)").matches ? 1.25 : 1.5;
 
 export default function Scene({ state, room, onTravel, onOpen, onNext, onSkip, onBubbleShown, bubbleAppear }: SceneProps) {
   const [dpr, setDpr] = useState(MAX_DPR);
+  // Building the whole planet in one go froze a phone for over a second, Next taps included. The player and
+  // camera mount first; each later stage waits for a painted frame, so the build lands as short tasks.
+  const [stage, setStage] = useState(0);
+  useEffect(() => {
+    if (stage >= LAST_STAGE) return;
+    let id = requestAnimationFrame(() => (id = requestAnimationFrame(() => setStage(stage + 1))));
+    return () => cancelAnimationFrame(id);
+  }, [stage]);
   const near = state.mode === "exploring" ? state.near : null;
   const inspecting = state.mode === "inspecting" ? state.station : null;
   return (
@@ -53,34 +61,53 @@ export default function Scene({ state, room, onTravel, onOpen, onNext, onSkip, o
     >
       <PerformanceMonitor onChange={({ factor }) => setDpr(1 + (MAX_DPR - 1) * factor)} />
       <Daylight />
-      <Earth />
-      <World near={near} inspecting={inspecting} visited={state.visited} />
-      <Lamps />
-      <Screens />
-      <Rigs />
-      <Waypoints
-        near={near}
-        inspecting={inspecting}
-        visited={state.visited}
-        show={state.mode === "exploring" || state.mode === "inspecting"}
-      />
-      <GithubGrid />
       <Crowd near={near} onOpen={onOpen} />
-      <Agents />
-      <Speech lines={room.lines} names={room.names} me={room.me} kings={room.kings} onMute={room.mute} />
-      {state.mode === "map" && <Globe visited={state.visited} onTravel={onTravel} />}
       {state.mode === "onboarding" && (
         <IntroBubble step={state.step} onNext={onNext} onSkip={onSkip} onShown={onBubbleShown} appear={bubbleAppear} />
       )}
-      <Ping />
-      <Confetti />
       <CameraRig />
       <ClickToMove onTravel={onTravel} />
-      <MinimapView />
+      {stage >= 1 && <Earth />}
+      {stage >= 2 && <Ground />}
+      {stage >= 3 && <World near={near} inspecting={inspecting} visited={state.visited} />}
+      {stage >= 4 && (
+        <>
+          <Lamps />
+          <Screens />
+          <Rigs />
+        </>
+      )}
+      {stage >= 5 && (
+        <>
+          <Waypoints
+            near={near}
+            inspecting={inspecting}
+            visited={state.visited}
+            show={state.mode === "exploring" || state.mode === "inspecting"}
+          />
+          <GithubGrid />
+        </>
+      )}
+      {stage >= 6 && (
+        <>
+          <Agents />
+          <Speech lines={room.lines} names={room.names} me={room.me} kings={room.kings} onMute={room.mute} />
+          {state.mode === "map" && <Globe visited={state.visited} onTravel={onTravel} />}
+        </>
+      )}
+      {stage >= 7 && (
+        <>
+          <Ping />
+          <Confetti />
+          <MinimapView />
+        </>
+      )}
       {INFO && <Info />}
     </Canvas>
   );
 }
+
+const LAST_STAGE = 7;
 
 const INFO = process.env.NODE_ENV !== "production" && typeof location !== "undefined" && new URLSearchParams(location.search).has("info");
 

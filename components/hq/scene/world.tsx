@@ -40,12 +40,9 @@ interface WorldProps {
   visited: ReadonlySet<StationId>;
 }
 
-export function World({ near, inspecting, visited }: WorldProps) {
+/** The terrain and its painted shadows, a stage apart from the stations so neither build freezes a phone for long. */
+export function Ground() {
   const ground = useMemo(() => buildGround(), []);
-  const landmarks = useMemo(
-    () => mergeGeometries(STATIONS.map((s) => buildStation(s.id).applyMatrix4(LANDMARKS[s.id].frame)), false),
-    [],
-  );
   const decals = useMemo(() => buildDecals(), []);
   const squareMat = useMemo(
     () => new MeshBasicMaterial({ map: softSquare(), transparent: true, opacity: 0.45, depthWrite: false, color: "#3a3226" }),
@@ -53,6 +50,20 @@ export function World({ near, inspecting, visited }: WorldProps) {
   );
   const roundMat = useMemo(
     () => new MeshBasicMaterial({ map: blobTexture(), transparent: true, opacity: 0.6, depthWrite: false }),
+    [],
+  );
+  return (
+    <>
+      <mesh ref={freeze} geometry={ground} material={CLAY} />
+      <mesh ref={freeze} geometry={decals.squares} material={squareMat} renderOrder={1} />
+      <mesh ref={freeze} geometry={decals.rounds} material={roundMat} renderOrder={1} />
+    </>
+  );
+}
+
+export function World({ near, inspecting, visited }: WorldProps) {
+  const landmarks = useMemo(
+    () => mergeGeometries(STATIONS.map((s) => buildStation(s.id).applyMatrix4(LANDMARKS[s.id].frame)), false),
     [],
   );
   const tiles = useRef<InstancedMesh>(null);
@@ -106,9 +117,6 @@ export function World({ near, inspecting, visited }: WorldProps) {
 
   return (
     <>
-      <mesh ref={freeze} geometry={ground} material={CLAY} />
-      <mesh ref={freeze} geometry={decals.squares} material={squareMat} renderOrder={1} />
-      <mesh ref={freeze} geometry={decals.rounds} material={roundMat} renderOrder={1} />
       <mesh ref={freeze} geometry={landmarks} material={CLAY} userData={{ landmark: true }} />
       <instancedMesh
         ref={tiles}
