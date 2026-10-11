@@ -82,6 +82,8 @@ export interface Room {
   preset: (p: number) => void;
   emote: (e: Emote) => void;
   mute: (id: PeerId) => void;
+  /** saves an owner key on this device and asks the room to check it */
+  claim: (key: string) => void;
 }
 
 const OFF: Room = {
@@ -96,6 +98,7 @@ const OFF: Room = {
   preset: () => {},
   emote: () => {},
   mute: () => {},
+  claim: () => {},
 };
 
 const q3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -115,6 +118,8 @@ export function useRoom(active: boolean): Room {
   const muted = useRef(new Set<PeerId>());
   const sock = useRef<WebSocket | null>(null);
   const ready = useRef(false);
+  /** the room hears one owner key per socket, so this socket has had its guess */
+  const claimed = useRef(false);
   const key = useRef(0);
 
   useEffect(() => {
@@ -132,7 +137,7 @@ export function useRoom(active: boolean): Room {
     const given = new Map<PeerId, string>();
     let self: PeerId | null = null;
     let mine = savedName();
-    const claim = ownerKey();
+    ownerKey();
     const labelOf = (pid: PeerId) => (pid === self ? mine : (given.get(pid) ?? nameFor(seats.get(pid)?.look ?? 0)));
     const publish = () => {
       const all: Record<PeerId, string> = {};
@@ -206,7 +211,11 @@ export function useRoom(active: boolean): Room {
           for (const p of m.peers) seat(p);
           // an old worker ignores this and never echoes, so you keep the name you came with
           ws?.send(JSON.stringify({ t: "name", name: mine }));
-          if (claim) ws?.send(JSON.stringify({ t: "claim", key: claim }));
+          {
+            const claim = ownerKey();
+            claimed.current = !!claim;
+            if (claim) ws?.send(JSON.stringify({ t: "claim", key: claim }));
+          }
           count();
           // announce where we stand, so the others see us the moment we arrive
           sent.at = -Infinity;
@@ -356,7 +365,23 @@ export function useRoom(active: boolean): Room {
     setLines((ls) => ls.filter((l) => l.id !== pid));
   }, []);
 
+  const claim = useCallback(
+    (k: string) => {
+      if (!OWNER_KEY.test(k)) return;
+      try {
+        localStorage.setItem(OWNER, k);
+      } catch {}
+      // a socket that already guessed rejoins, and the fresh one sends the new key on hello
+      if (claimed.current) sock.current?.close();
+      else if (ready.current) {
+        claimed.current = true;
+        post({ t: "claim", key: k });
+      }
+    },
+    [post],
+  );
+
   return URL && active
-    ? { online, me, lines, names, kings, myName, rename, say, preset, emote, mute }
+    ? { online, me, lines, names, kings, myName, rename, say, preset, emote, mute, claim }
     : OFF;
 }

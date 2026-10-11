@@ -1,26 +1,13 @@
-import { useEffect, useState } from "react";
 import Image from "next/image";
-import { ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 import { PROJECTS } from "@/data/projects";
+
+type Project = (typeof PROJECTS)[number];
 
 const linkClass =
   "inline-flex items-center gap-1 rounded-full border border-hq-line px-3 py-1.5 text-[11px] text-hq-accent transition-colors hover:bg-hq-bg";
 
-export function ProjectsPanel() {
-  const [i, setI] = useState(0);
-  const last = PROJECTS.length - 1;
-  const go = (d: number) => setI((n) => (n + d + PROJECTS.length) % PROJECTS.length);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") setI((n) => (n + last) % PROJECTS.length);
-      if (e.key === "ArrowRight") setI((n) => (n + 1) % PROJECTS.length);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [last]);
-
-  const p = PROJECTS[i];
+function ProjectPage({ p }: { p: Project }) {
   return (
     <div className="flex h-full flex-col gap-3">
       <div className="relative aspect-[2/1] w-full shrink-0 overflow-hidden rounded-2xl border border-hq-line sm:aspect-[16/9]" style={{ background: p.gradient }}>
@@ -53,15 +40,14 @@ export function ProjectsPanel() {
             GitHub <ArrowUpRight className="size-3" />
           </a>
         )}
-        <div className="ml-auto flex items-center gap-1">
-          <button type="button" aria-label="Previous project" onClick={() => go(-1)} className="rounded-full border border-hq-line p-1.5 text-hq-ink transition-colors hover:bg-hq-bg">
-            <ChevronLeft className="size-4" />
-          </button>
-          <button type="button" aria-label="Next project" onClick={() => go(1)} className="rounded-full border border-hq-line p-1.5 text-hq-ink transition-colors hover:bg-hq-bg">
-            <ChevronRight className="size-4" />
-          </button>
-        </div>
       </div>
     </div>
   );
 }
+
+/** one book page per project */
+export const PROJECT_PAGES = PROJECTS.map((p) => {
+  const Page = () => <ProjectPage p={p} />;
+  Page.displayName = `Project(${p.title})`;
+  return Page;
+});

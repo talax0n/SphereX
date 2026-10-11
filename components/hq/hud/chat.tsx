@@ -4,6 +4,7 @@ import { Crown, MessageCircle, Pencil, SendHorizontal, X } from "lucide-react";
 import { EMOTES, type Emote, NAME_MAX, PRESETS, SAY_MAX, cleanName } from "@/data/room";
 import { cn } from "@/lib/utils";
 import { ctl } from "../game";
+import { CHEAT_COMMAND, openCheat } from "./cheat";
 import type { Line, Room } from "../use-room";
 
 const EMOJI: Record<Emote, string> = { wave: "👋", cheer: "🎉", hop: "⬆️", point: "👉" };
@@ -163,6 +164,10 @@ export function Chat({ room }: { room: Room }) {
 
   const send = (e: React.FormEvent) => {
     e.preventDefault();
+    if (draft.trim().toLowerCase() === CHEAT_COMMAND) {
+      close();
+      return openCheat();
+    }
     if (draft.trim()) room.say(draft);
     setDraft("");
     input.current?.focus();

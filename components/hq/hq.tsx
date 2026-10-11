@@ -4,11 +4,12 @@ import dynamic from "next/dynamic";
 import { AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Chat } from "./hud/chat";
+import { Cheat } from "./hud/cheat";
 import { Dock, Hint, Replay, Toast, Wordmark } from "./hud/hud";
 import { EdgeArrows, MapChrome, Minimap } from "./hud/map";
 import { Sky } from "./sky";
 import { Today } from "./hud/today";
-import { Panel } from "./hud/panel";
+import { Book } from "./hud/book";
 import { JumpButton, Stick } from "./hud/stick";
 import { IntroControls } from "./scene/intro";
 import { useHQ } from "./use-hq";
@@ -105,8 +106,9 @@ export function HQ() {
       <AnimatePresence>{map && <MapChrome onClose={close} />}</AnimatePresence>
 
       <AnimatePresence>
-        {state.mode === "inspecting" && <Panel key={state.station} id={state.station} onClose={close} />}
+        {state.mode === "inspecting" && <Book key={state.station} id={state.station} onClose={close} />}
       </AnimatePresence>
+      <Cheat room={room} />
     </main>
   );
 }
