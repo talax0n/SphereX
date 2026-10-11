@@ -31,7 +31,9 @@ export type ClientMsg =
   | { t: "preset"; p: number }
   | { t: "name"; name: string }
   /** the site owner proving who they are with the key only they hold */
-  | { t: "claim"; key: string };
+  | { t: "claim"; key: string }
+  /** a visitor asking the site owner, if they are in the room, to come say hi */
+  | { t: "knock" };
 
 export type ServerMsg =
   | { t: "hello"; you: PeerId; peers: Peer[] }
@@ -43,6 +45,8 @@ export type ServerMsg =
   | { t: "name"; id: PeerId; name: string }
   /** this person is the site owner; only sent after the server checked their key */
   | { t: "crown"; id: PeerId }
+  /** someone knocked; only the owner's sockets ever get this */
+  | { t: "knock"; id: PeerId }
   | { t: "full" };
 
 const ID = /^[0-9a-z]{6}$/;
@@ -156,6 +160,8 @@ export function parseClient(text: unknown): ClientMsg | null {
     }
     case "claim":
       return exactly(x, ["t", "key"]) && typeof x.key === "string" && OWNER_KEY.test(x.key) ? { t: "claim", key: x.key } : null;
+    case "knock":
+      return exactly(x, ["t"]) ? { t: "knock" } : null;
     default:
       return null;
   }
@@ -198,6 +204,8 @@ export function parseServer(text: unknown): ServerMsg | null {
     }
     case "crown":
       return exactly(x, ["t", "id"]) && isId(x.id) ? { t: "crown", id: x.id } : null;
+    case "knock":
+      return exactly(x, ["t", "id"]) && isId(x.id) ? { t: "knock", id: x.id } : null;
     case "full":
       return exactly(x, ["t"]) ? { t: "full" } : null;
     default:

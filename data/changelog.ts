@@ -16,6 +16,8 @@ export const CHANGELOG: Release[] = [
       "The address bar follows whichever book you have open, so you can share it.",
       "A plain page at theola.dev/read has everything in one scroll, for when you just want to read.",
       "Browsers that can't draw the planet go straight to that page.",
+      "When I'm online you can knock on my door, and I get pinged to come say hi in chat.",
+      "When I'm away, the same button takes you to my letterbox instead.",
       "A live pill up top tells you when my AI agents are building right now.",
       "Tap it to see what they are working on, and walk over to watch them.",
       "The daily quests and streaks are gone, so the screen is calmer.",

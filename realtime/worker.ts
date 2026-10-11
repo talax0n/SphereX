@@ -17,6 +17,7 @@ const BURST = 4;
 const REFILL = 2000;
 const MOVE_GAP = 60;
 const RENAME_GAP = 3000;
+const KNOCK_GAP = 60_000;
 
 const sha = async (s: string) => crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
 /** hashing first gives equal lengths, so the comparison takes the same time whatever the guess */
@@ -43,7 +44,7 @@ export default {
 
 export class Room extends DurableObject<Env> {
   /** lost when the object hibernates, which only happens once every socket has been idle for a while */
-  private limits = new WeakMap<WebSocket, { tokens: number; at: number; move: number; name: number }>();
+  private limits = new WeakMap<WebSocket, { tokens: number; at: number; move: number; name: number; knock: number }>();
 
   private seats(except?: WebSocket) {
     const out: { ws: WebSocket; seat: Seat }[] = [];
@@ -99,7 +100,7 @@ export class Room extends DurableObject<Env> {
     const msg = typeof data === "string" ? parseClient(data) : null;
     if (!seat || !msg) return;
     const now = Date.now();
-    const lim = this.limits.get(ws) ?? { tokens: BURST, at: now, move: 0, name: 0 };
+    const lim = this.limits.get(ws) ?? { tokens: BURST, at: now, move: 0, name: 0, knock: 0 };
     this.limits.set(ws, lim);
 
     if (msg.t === "move") {
@@ -146,6 +147,13 @@ export class Room extends DurableObject<Env> {
 
     // a visitor who hasn't appeared yet has no avatar to speak from
     if (!seat.n) return;
+    if (msg.t === "knock") {
+      const owners = this.seats(ws).filter((s) => s.seat.owner);
+      if (seat.owner || !owners.length || now - lim.knock < KNOCK_GAP) return;
+      lim.knock = now;
+      for (const { ws: o } of owners) this.send(o, { t: "knock", id: seat.id });
+      return;
+    }
     lim.tokens = Math.min(BURST, lim.tokens + (now - lim.at) / REFILL);
     lim.at = now;
     if (lim.tokens < 1) return;

@@ -68,7 +68,7 @@ assert.equal(parseClient(enc({ t: "name", name: "shit" })), null, "blocked name"
 assert.equal(parseClient(enc({ t: "name", name: "" })), null, "empty name");
 const key = "k".repeat(16);
 assert.deepEqual(parseClient(enc({ t: "claim", key })), { t: "claim", key });
-assert.equal(parseClient(enc({ t: "claim", key: "k".repeat(15) })), null, "owner key too short");
+assert.equal(parseClient(enc({ t: "claim", key: "k".repeat(3) })), null, "owner key too short");
 assert.equal(parseClient(enc({ t: "claim", key: "k".repeat(257) })), null, "owner key too long");
 assert.equal(parseClient(enc({ t: "claim", key: `${key} x` })), null, "owner key with a space");
 const b64 = "Zm9vYmFy+YmF6cXV4/cXV1eA==";
@@ -77,6 +77,14 @@ assert.equal(parseClient(enc({ t: "claim", key, extra: 1 })), null, "claim with 
 assert.deepEqual(parseServer(enc({ t: "crown", id: "a1b2c3" })), { t: "crown", id: "a1b2c3" });
 assert.equal(parseServer(enc({ t: "crown", id: "nope" })), null, "crown for a bad id");
 assert.equal(parseServer(enc({ t: "crown", id: "a1b2c3", name: "King" })), null, "crown with an extra key");
+assert.deepEqual(parseClient(enc({ t: "knock" })), { t: "knock" });
+assert.equal(parseClient(enc({ t: "knock", id: "a1b2c3" })), null, "cannot knock as another id");
+assert.equal(parseClient(enc({ t: "knock", to: "a1b2c3" })), null, "knock with an extra key");
+assert.deepEqual(parseServer(enc({ t: "knock", id: "a1b2c3" })), { t: "knock", id: "a1b2c3" });
+assert.equal(parseServer(enc({ t: "knock" })), null, "knock without who");
+assert.equal(parseServer(enc({ t: "knock", id: "A1B2C3" })), null, "knock with an uppercase id");
+assert.equal(parseServer(enc({ t: "knock", id: 7 })), null, "knock with a numeric id");
+assert.equal(parseServer(enc({ t: "knock", id: "a1b2c3", name: "Bee" })), null, "knock with an extra key");
 assert.equal(parseClient(enc({ t: "name", name: "Bob", id: "a1b2c3" })), null, "cannot rename another id");
 assert.equal(parseClient(enc({ t: "name" })), null, "missing name");
 assert.equal(parseClient("not json"), null);

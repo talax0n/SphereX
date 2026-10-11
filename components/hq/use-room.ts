@@ -84,6 +84,10 @@ export interface Room {
   mute: (id: PeerId) => void;
   /** saves an owner key on this device and asks the room to check it */
   claim: (key: string) => void;
+  /** pings the site owner; the room drops it unless they're here, and allows one a minute */
+  knock: () => void;
+  /** the latest knock on the owner's door, as only the owner hears it */
+  knocked: { key: number; name: string } | null;
 }
 
 const OFF: Room = {
@@ -99,6 +103,8 @@ const OFF: Room = {
   emote: () => {},
   mute: () => {},
   claim: () => {},
+  knock: () => {},
+  knocked: null,
 };
 
 const q3 = (x: number) => Math.round(x * 1000) / 1000;
@@ -115,6 +121,7 @@ export function useRoom(active: boolean): Room {
   const [names, setNames] = useState<Readonly<Record<PeerId, string>>>({});
   const [myName, setMyName] = useState<string | null>(null);
   const [kings, setKings] = useState<ReadonlySet<PeerId>>(OFF.kings);
+  const [knocked, setKnocked] = useState<Room["knocked"]>(null);
   const muted = useRef(new Set<PeerId>());
   const sock = useRef<WebSocket | null>(null);
   const ready = useRef(false);
@@ -261,6 +268,9 @@ export function useRoom(active: boolean): Room {
           setKings((ks) => new Set(ks).add(m.id));
           break;
         }
+        case "knock":
+          setKnocked({ key: key.current++, name: labelOf(m.id) });
+          break;
         case "full":
           // the server closes right after; onclose then tries the next room
           room++;
@@ -341,6 +351,7 @@ export function useRoom(active: boolean): Room {
       clear();
       setLines([]);
       setMyName(null);
+      setKnocked(null);
     };
   }, [active]);
 
@@ -350,6 +361,7 @@ export function useRoom(active: boolean): Room {
   const say = useCallback((text: string) => post({ t: "say", text }), [post]);
   const preset = useCallback((p: number) => p >= 0 && p < PRESETS.length && post({ t: "preset", p }), [post]);
   const rename = useCallback((name: string) => post({ t: "name", name }), [post]);
+  const knock = useCallback(() => post({ t: "knock" }), [post]);
   const emote = useCallback(
     (e: Emote) => {
       post({ t: "emote", e });
@@ -382,6 +394,6 @@ export function useRoom(active: boolean): Room {
   );
 
   return URL && active
-    ? { online, me, lines, names, kings, myName, rename, say, preset, emote, mute, claim }
+    ? { online, me, lines, names, kings, myName, rename, say, preset, emote, mute, claim, knock, knocked }
     : OFF;
 }

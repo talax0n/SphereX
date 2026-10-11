@@ -21,6 +21,22 @@ const SAYS: Record<Status, string> = {
   offline: "The room is offline, so nobody can check it right now.",
 };
 
+/** Asks for permission to raise a system notification when a visitor knocks while this tab is hidden. */
+function PingMe() {
+  const [perm, setPerm] = useState(() => (typeof Notification === "undefined" ? null : Notification.permission));
+  if (!perm) return null;
+  return (
+    <button
+      type="button"
+      disabled={perm !== "default"}
+      onClick={() => Notification.requestPermission().then(setPerm)}
+      className="mt-1 rounded-full border border-hq-line px-4 py-1.5 text-[12px] font-semibold text-hq-ink transition-colors hover:bg-hq-bg disabled:opacity-60 disabled:hover:bg-transparent"
+    >
+      {perm === "granted" ? "Pinging you on knocks" : perm === "denied" ? "Notifications are blocked" : "Ping me on knocks"}
+    </button>
+  );
+}
+
 /** A hidden console for the site owner: their key, checked by the room, puts a crown on their head. */
 export function Cheat({ room }: { room: Room }) {
   const dialog = useRef<HTMLDialogElement>(null);
@@ -82,6 +98,7 @@ export function Cheat({ room }: { room: Room }) {
           <Crown className="size-8 text-[#d9a21e]" strokeWidth={2.5} />
           <p className="font-display text-xl font-extrabold">Welcome back, boss.</p>
           <p className="text-[12px] text-hq-mute">Everyone in the room sees your crown.</p>
+          <PingMe />
           <form method="dialog">
             <button className="mt-2 rounded-full bg-hq-accent px-4 py-1.5 text-[12px] font-semibold text-white">Nice</button>
           </form>

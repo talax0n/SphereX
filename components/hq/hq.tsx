@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Chat } from "./hud/chat";
 import { Cheat } from "./hud/cheat";
+import { Knock } from "./hud/knock";
 import { Ps } from "./hud/ps";
 import { Dock, Hint, Replay, Toast, Wordmark } from "./hud/hud";
 import { EdgeArrows, MapChrome, Minimap } from "./hud/map";
@@ -98,6 +99,7 @@ export function HQ({ start }: { start?: StationId }) {
       <AnimatePresence>
         {state.mode === "inspecting" && <Book key={state.station} id={state.station} onClose={close} />}
       </AnimatePresence>
+      <Knock room={room} exploring={state.mode === "exploring"} onLetter={() => open("contact")} />
       <Cheat room={room} />
     </main>
   );
