@@ -37,7 +37,7 @@ import {
   stepVisitor,
 } from "./folk";
 import { IDLES, type Gesture, type Pose, blankPose, chasePose, mirrorPose, mixPose, onceOf, poseOf } from "./gesture";
-import { LANDMARKS, R, SEA_LEVEL, arc, depthAt, flatten, frameAt, standLift, steer, swimming, toward } from "./planet";
+import { LANDMARKS, R, SEA_LEVEL, arc, depthAt, flatten, frameAt, pathDown, plinthAt, standLift, steer, swimming, toward } from "./planet";
 import { blobTexture } from "./props";
 import { TIME_SCALE } from "./work";
 
@@ -78,7 +78,18 @@ const drop = { vy: 0, t: 0, wind: 0, flail: 0, last: ctl.intro };
 /** one dust ring for whoever touched down last, the player or an agent dropping in */
 const puffAt = { n: new Vector3(), heading: new Vector3(), t: Infinity, lift: 0 };
 /** the player's own jump and the water they're in */
-const self = { vy: 0, ground: 0, wet: false };
+const self = {
+  vy: 0,
+  ground: 0,
+  wet: false,
+  /** waypoints down off a plinth toward `pathFor`, the click target they were found for */
+  path: [] as Vector3[],
+  pathFor: null as typeof ctl.target,
+  /** the plinth underfoot, and how long the view keeps turning to face into it */
+  on: undefined as StationId | undefined,
+  facing: 0,
+};
+const into = new Vector3();
 function land(f: Folk, lift = 0) {
   puffAt.lift = lift;
   puffAt.n.copy(f.n);
@@ -149,12 +160,21 @@ function stepPlayer(f: Folk, dt: number, stuck: { t: number }): number {
     if (left < 0.08) {
       if (!ctl.target.station) ctl.target = null;
     } else {
-      toward(p.n, ctl.target.n, dir);
+      if (self.pathFor !== ctl.target) {
+        self.pathFor = ctl.target;
+        const on = plinthAt(p.n);
+        self.path = on && plinthAt(ctl.target.n) !== on ? pathDown(p.n, RADIUS) : [];
+      }
+      while (self.path.length && arc(p.n, self.path[0]) < 0.12) self.path.shift();
+      toward(p.n, self.path[0] ?? ctl.target.n, dir);
       want = Math.min(SPEED, left * 4 + 0.5);
     }
   }
   if (self.wet) want *= STROKE;
-  if (want > 0) steer(p.n, dir, RADIUS, ctl.target?.n ?? null, null, true);
+  // walking by hand, plinth edges stop the player; a walk to a target off the plinth still detours round them
+  const detour = !!ctl.target && !self.path.length && !plinthAt(p.n);
+  if (want > 0) steer(p.n, dir, RADIUS, ctl.target?.n ?? null, null, true, detour);
+  faceInto(dt);
   f.speed += (want - f.speed) * Math.min(1, dt * (want ? 9 : 12));
 
   const turn = want > 0 ? Math.atan2(v.crossVectors(p.heading, dir).dot(p.n), p.heading.dot(dir)) : 0;
@@ -174,6 +194,25 @@ function stepPlayer(f: Folk, dt: number, stuck: { t: number }): number {
     stuck.t = 0;
   }
   return lean;
+}
+
+/** Stepping onto a plinth turns the view to look in through its open corner, where no wall or roof is in the way; dragging still turns it after. */
+function faceInto(dt: number) {
+  const p = ctl.player;
+  const on = plinthAt(p.n);
+  if (on !== self.on) {
+    self.on = on;
+    self.facing = on ? 0.8 : 0;
+  }
+  if (!on || self.facing <= 0) return;
+  self.facing -= dt;
+  const l = LANDMARKS[on];
+  // the plinth's open +X+Z corner faces the hub, so looking along -X-Z sees past the back walls
+  flatten(into.set(-1, 0, -1).transformDirection(l.frame), p.n);
+  // rotate rather than lerp: a lerp from the opposite way passes through zero
+  const off = Math.atan2(v.crossVectors(ctl.north, into).dot(p.n), ctl.north.dot(into));
+  ctl.north.applyAxisAngle(p.n, off * Math.min(1, dt * 5));
+  flatten(ctl.north, p.n);
 }
 
 function stepKeeper(f: Extract<Folk, { kind: "keeper" }>, dt: number) {

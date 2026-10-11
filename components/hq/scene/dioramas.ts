@@ -41,6 +41,103 @@ export const PLINTH_SIZE: Record<StationId, number> = {
 export const PLINTH_HEIGHT = 0.4;
 /** The plinth runs this far below the ground so its corners stay buried where the planet curves away, even the HQ's. */
 const SKIRT = 0.9;
+
+/** A flight of steps runs out from each plinth's front (+Z) edge, centred at this x, clear of the furniture inside. */
+export const STAIRS: Record<StationId, number> = {
+  about: 0,
+  projects: 1.3,
+  experience: 0,
+  skills: -0.2,
+  awards: 0,
+  github: 0.5,
+  contact: 0.6,
+  updates: -0.3,
+};
+export const STAIR_W = 0.9;
+export const STEPS = 3;
+export const STEP_D = 0.26;
+/** Top of tread `j` above the ground, counted out from the plinth. */
+export const treadAt = (j: number) => (PLINTH_HEIGHT * (STEPS - j)) / (STEPS + 1);
+
+/** [x0, z0, x1, z1] in plinth space, then for a block you can climb, the height of its top. */
+export type Rect = readonly [number, number, number, number, number?];
+/** The tallest rise a walker steps up without a jump: the podium's lowest step. */
+export const STEP_UP = 0.46;
+const around = (x: number, z: number, r: number): Rect => [x - r, z - r, x + r, z + r];
+
+/** What a walker on the plinth bumps into. Rugs, flowers and other low things stay walkable. */
+export const SOLIDS: Record<StationId, Rect[]> = {
+  about: [
+    [-1.47, -1.48, 1.25, -1.32],
+    [-1.48, -1.47, -1.32, 1.25],
+    [-1.26, -1.32, -0.64, -1.02],
+    [0.1, -1.28, 1.1, -0.72],
+    [0.3, -0.65, 0.7, -0.22],
+    [-1.3, -0.96, -0.72, 0.66],
+    around(-0.2, -0.1, 0.22),
+    around(-1.2, 0.85, 0.12),
+    around(1.0, 0.2, 0.2),
+  ],
+  projects: [
+    [-2.95, -2.96, 2.95, -2.8],
+    [-2.96, -2.81, -2.8, 2.95],
+    [-2.75, -2.75, 0.25, -1.75],
+    [-2.75, -1.4, 0.25, -0.4],
+    [2.07, -2.33, 2.63, -0.98],
+    [1.3, -2.47, 1.8, -1.48],
+    [1.85, -0.65, 2.65, 0.35],
+    [1.78, 0.7, 2.7, 1.3],
+    [0.43, 1.62, 0.67, 2.38],
+    [-2.6, 0.45, -1.3, 2.75],
+    [0.55, -2.8, 1.15, -2.3],
+    [0.68, -1.61, 1.02, -1.29],
+    [0.55, -0.7, 1.15, -0.2],
+    around(-0.45, 1.6, 0.18),
+    ...[[0.15, 0.55], [0.1, 2.6], [-2.65, -0.05]].map(([x, z]) => around(x, z, 0.25)),
+  ],
+  experience: [
+    ...EXPERIENCE.flatMap((_, i): Rect[] => {
+      const x = 0.55 - i * 0.85;
+      return [[x - 0.425, -0.975, x + 0.425, 0.275, 0.32 * (i + 1)], around(x + 0.3, 0.18, 0.07), around(x, -0.92, 0.05)];
+    }),
+    ...[[-0.32, -0.85], [0.32, -0.85], [-0.32, 0.15], [0.32, 0.15]].map(([dx, dz]) => around(0.55 - (EXPERIENCE.length - 1) * 0.85 + dx, -0.35 + dz, 0.05)),
+    around(1.25, -0.95, 0.07),
+  ],
+  skills: [
+    [-1.47, -1.53, 1.25, -1.37],
+    [-1.53, -1.47, -1.37, 1.25],
+    [-1.1, -1.25, 0.6, -0.55],
+    [0.25, -0.7, 0.85, 0.35],
+    around(-0.75, 0.25, 0.23),
+    around(-1.15, 0.85, 0.12),
+  ],
+  awards: [
+    ...[[0, 0.95], [-0.9, 0.65], [0.9, 0.45]].slice(0, Math.min(3, AWARDS.length)).flatMap(([x, h]): Rect[] => [
+      [x - 0.4, -0.8, x + 0.4, 0, h],
+      around(x, -0.4, 0.14),
+    ]),
+    ...[-1.25, 1.25].flatMap((x) => [around(x, -1.25, 0.16), around(x, -0.55, 0.16), around(x, 0.3, 0.07)]),
+  ],
+  github: [
+    [-1.45, -1.45, 1.45, 0.37],
+    [-1.4, 0.42, -0.78, 0.98],
+    [-0.65, 0.78, -0.15, 1.12],
+  ],
+  contact: [
+    [-1.27, -1.5, 0.27, -0.45],
+    around(0.55, -0.95, 0.24),
+    [-1.4, 0.15, -1.0, 0.55],
+    [-0.7, 0.6, 0.1, 0.9],
+    around(1.25, -1.4, 0.07),
+  ],
+  updates: [
+    [-1.25, -0.8, 1.25, -0.6],
+    around(-1.4, -0.3, 0.07),
+    around(1.4, -1.1, 0.07),
+    [-0.6, 0.3, 0.2, 0.6],
+    around(-1.15, 0.6, 0.18),
+  ],
+};
 const H = Math.PI / 2;
 
 /** Dioramas leave the plinth's front-right corner (x,z > half - 1.05) free for the progress tile. */
@@ -729,5 +826,15 @@ export function buildStation(id: StationId): BufferGeometry {
     tone: IDENTITY[id].wall,
     surf: "stone",
   });
-  return merge([plinth, ...BUILDERS[id](IDENTITY[id])], [0, PLINTH_HEIGHT, 0]);
+  const half = PLINTH_SIZE[id] / 2;
+  // each tread runs back to the plinth, so the flight reads as one stacked block
+  const steps = Array.from({ length: STEPS }, (_, j) => {
+    const top = treadAt(j);
+    const d = (j + 1) * STEP_D + 0.05;
+    return part(box(STAIR_W, top + SKIRT * 0.5, d, 0.04), [STAIRS[id], top - PLINTH_HEIGHT - (top + SKIRT * 0.5) / 2, half - 0.05 + d / 2], {
+      tone: IDENTITY[id].wall,
+      surf: "stone",
+    });
+  });
+  return merge([plinth, ...steps, ...BUILDERS[id](IDENTITY[id])], [0, PLINTH_HEIGHT, 0]);
 }

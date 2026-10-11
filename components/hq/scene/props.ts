@@ -226,7 +226,7 @@ const blocked = (p: Vector3, r: number) =>
   coast(p) > -1 - r ||
   arc(p, NORTH_POLE) < PLAZA + r + 0.3 ||
   nearPath(p, PATH_WIDTH / 2 + r) ||
-  STATIONS.some(({ id }) => arc(p, LANDMARKS[id].door) < 1.3) ||
+  STATIONS.some(({ id }) => arc(p, LANDMARKS[id].door) < 1.3 || arc(p, LANDMARKS[id].foot) < 0.6 + r) ||
   OBSTACLES.some((o) => arc(p, o.n) < o.r + r + 0.15);
 
 export interface Decal {

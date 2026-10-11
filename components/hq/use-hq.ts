@@ -4,7 +4,7 @@ import { STATIONS, STATION_BY_ID, type StationId } from "@/data/stations";
 import { INTRO } from "@/data/onboarding";
 import { type GameAction, HOVER, ctl, gameReducer, setGesture, setPing, setTarget, initialState } from "./game";
 import { IDENTITY } from "./scene/dioramas";
-import { LANDMARKS, arc, toward } from "./scene/planet";
+import { LANDMARKS, arc, plinthAt, toward } from "./scene/planet";
 
 const VISITED_KEY = "hq:visited";
 const INTRO_KEY = "hq:intro";
@@ -194,10 +194,11 @@ export function useHQ() {
       const { mode } = stateRef.current;
       if (mode === "onboarding" || mode === "landing") return;
       close();
+      if (plinthAt(ctl.player.n) === id) return open(id);
       setTarget(LANDMARKS[id].door, id);
       setPing(LANDMARKS[id].door, "move", IDENTITY[id].top);
     },
-    [close],
+    [close, open],
   );
 
   // Poll at 10Hz so proximity and landing never touch React from the render loop.
@@ -214,8 +215,9 @@ export function useHQ() {
       if (s.daily && s.daily.date !== date) dispatch({ type: "day", date });
       if (s.mode !== "exploring") return;
       const p = ctl.player.n;
-      let near: StationId | null = null;
-      let best = NEAR_RADIUS;
+      // standing on a plinth counts as being at its door
+      let near: StationId | null = plinthAt(p) ?? null;
+      let best = near ? 0 : NEAR_RADIUS;
       for (const st of STATIONS) {
         const d = arc(p, LANDMARKS[st.id].door);
         if (d < best) [best, near] = [d, st.id];

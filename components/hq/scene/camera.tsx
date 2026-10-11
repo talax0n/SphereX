@@ -17,7 +17,7 @@ import { RADIUS } from "./folk";
 import { lampHits, toggleLamp } from "./lamps";
 import { introScale } from "./intro";
 import { DENY, MOVE } from "./ping";
-import { LANDMARKS, R, blocked, flatten } from "./planet";
+import { LANDMARKS, R, blocked, flatten, plinthAt } from "./planet";
 
 /** Tilt of the view away from straight down; the horizon curves in near the top of the screen. Drag tilts it within the range. */
 const PITCH = 1.0;
@@ -26,6 +26,9 @@ const MAX_PITCH = 1.3;
 /** radians of orbit per pixel of drag */
 const DRAG = 0.006;
 let pitch = PITCH;
+/** how steeply the camera looks down on a plinth, and how far into that view it has eased */
+const ROOM_PITCH = 0.7;
+let room = 0;
 const orbit = new Quaternion();
 const DIST = 18;
 const MIN_ZOOM = 0.65;
@@ -126,6 +129,11 @@ export function CameraRig() {
     } else {
       desired.copy(ctl.player.n);
     }
+    // on a plinth, come in closer and look down more steeply, over the walls into the room
+    const on = !ctl.focus && !ctl.globe.open && !!plinthAt(ctl.player.n);
+    room += ((on ? 1 : 0) - room) * k;
+    dist *= 1 - 0.3 * room;
+    const tilt = pitch + (Math.min(pitch, ROOM_PITCH) - pitch) * room;
     if (narrow) dist *= 1.05;
     // the map's header sits over the top of the globe, so the globe sits a little lower
     if (ctl.globe.open) oy = -GLOBE_DROP;
@@ -145,8 +153,8 @@ export function CameraRig() {
     lookAt.copy(aim).multiplyScalar(R + 0.5);
     camera.position
       .copy(lookAt)
-      .addScaledVector(aim, view.dist * Math.cos(pitch))
-      .addScaledVector(north, -view.dist * Math.sin(pitch));
+      .addScaledVector(aim, view.dist * Math.cos(tilt))
+      .addScaledVector(north, -view.dist * Math.sin(tilt));
     camera.up.copy(aim);
     if (c > 0) {
       const p = ctl.player.n;

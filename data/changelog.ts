@@ -8,6 +8,19 @@ export interface Release {
 /** newest first */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.8.0",
+    date: "2026-10-11",
+    title: "Step inside",
+    notes: [
+      "Every station has a flight of stone steps up to its floor.",
+      "Climb the steps to walk around inside, between the furniture.",
+      "The camera leans in and looks over the walls while you're inside.",
+      "You can climb the Experience steps and the Awards podium one step at a time.",
+      "Click somewhere outside and you find your own way back down the steps.",
+      "Press E anywhere inside a station to open it.",
+    ],
+  },
+  {
     version: "1.7.1",
     date: "2026-10-11",
     title: "A smoother planet",

@@ -1,6 +1,6 @@
 import { Matrix4, Quaternion, Vector3, Vector4 } from "three";
 import { STATIONS, type StationId } from "@/data/stations";
-import { PLINTH_HEIGHT, PLINTH_SIZE } from "./dioramas";
+import { PLINTH_HEIGHT, PLINTH_SIZE, SOLIDS, STAIRS, STAIR_W, STEPS, STEP_D, STEP_UP, type Rect, treadAt } from "./dioramas";
 
 /** Planet radius. Every position on it is a unit vector; surface distance is angle times R. */
 export const R = 9;
@@ -72,6 +72,8 @@ export interface Landmark {
   /** obstacle radius: a little past the plinth's inscribed circle so corners rarely clip */
   footprint: number;
   door: Vector3;
+  /** the ground at the foot of the steps up the plinth */
+  foot: Vector3;
   keeper: Vector3;
   /** keeper's resting heading, looking back toward the hub */
   keeperFacing: Vector3;
@@ -98,6 +100,7 @@ function landmark(id: StationId, at: [number, number]): Landmark {
     half,
     footprint: half * 1.344 * LANDMARK_SCALE,
     door,
+    foot: new Vector3(STAIRS[id], 0, half + STEPS * STEP_D + 0.3).applyMatrix4(frame).normalize(),
     keeper,
     keeperFacing: toward(keeper, NORTH_POLE, new Vector3()),
   };
@@ -113,6 +116,8 @@ export interface Obstacle {
   r: number;
   /** water: the player swims through it, villagers keep to the beach */
   sea?: true;
+  /** a station: the player walks up its steps instead, everyone else goes round */
+  station?: true;
 }
 
 /** Seas as discs: centre (polar, azimuth) and radius, in degrees. The southern ocean sends bays up between the stations. */
@@ -181,7 +186,7 @@ export const seaUniform = () => ({ value: SEAS.map(({ n, r }) => new Vector4(n.x
 
 /** Mutable: props.ts appends trees and lamps once their scatter is generated. */
 export const OBSTACLES: Obstacle[] = [
-  ...STATIONS.map((s) => ({ n: LANDMARKS[s.id].n, r: LANDMARKS[s.id].footprint })),
+  ...STATIONS.map((s) => ({ n: LANDMARKS[s.id].n, r: LANDMARKS[s.id].footprint, station: true as const })),
   // a disc can't follow the coast, so where a lobe reaches furthest out a walker wades in ankle-deep
   ...SEAS.map(({ n, r }) => ({ n, r: r + WOBBLE * 0.35, sea: true as const })),
 ];
@@ -189,15 +194,163 @@ export const OBSTACLES: Obstacle[] = [
 const LIST = STATIONS.map((s) => LANDMARKS[s.id]);
 const local = new Vector3();
 
-/** Height of the plinth top above the ground at n, or 0 off every plinth: what a walker steps up onto. */
-export function plinthLift(n: Vector3): number {
+const RUN = STEPS * STEP_D;
+const inStairs = (l: Landmark, x: number, z: number) => Math.abs(x - STAIRS[l.id]) <= STAIR_W / 2 && z > l.half && z <= l.half + RUN;
+const onTop = (l: Landmark, x: number, z: number) => Math.abs(x) <= l.half && Math.abs(z) <= l.half;
+
+/** The landmark whose plinth or steps n stands on, leaving its plinth-space position in `local`. */
+function standing(n: Vector3): Landmark | undefined {
   for (const l of LIST) {
     if (n.dot(l.n) < 0.9) continue;
     local.copy(n).multiplyScalar(R).applyMatrix4(l.inverse);
-    if (Math.abs(local.x) > l.half || Math.abs(local.z) > l.half) continue;
-    return local.setY(PLINTH_HEIGHT).applyMatrix4(l.frame).length() - R;
+    if (onTop(l, local.x, local.z) || inStairs(l, local.x, local.z)) return l;
   }
-  return 0;
+}
+
+/** The station whose plinth or steps the walker at n is on. */
+export const plinthAt = (n: Vector3) => standing(n)?.id;
+
+/** Top of the climbable block under (x, z) on l's plinth, or 0 on its floor. */
+function ledge(l: Landmark, x: number, z: number): number {
+  let h = 0;
+  for (const [x0, z0, x1, z1, top] of SOLIDS[l.id]) if (top !== undefined && x >= x0 && x <= x1 && z >= z0 && z <= z1) h = Math.max(h, top);
+  return h;
+}
+
+/** Height of the plinth top, the block or the step underfoot at n, or 0 off every plinth: what a walker steps up onto. */
+export function plinthLift(n: Vector3): number {
+  const l = standing(n);
+  if (!l) return 0;
+  const y = onTop(l, local.x, local.z) ? PLINTH_HEIGHT + ledge(l, local.x, local.z) : treadAt(Math.floor((local.z - l.half) / STEP_D));
+  return local.setY(y).applyMatrix4(l.frame).length() - R;
+}
+
+/** Thin walls round each plinth, open only where its steps meet the ground, then whatever stands on it. */
+const T = 0.05;
+const WALLS = Object.fromEntries(
+  LIST.map((l) => {
+    const h = l.half;
+    const a = STAIRS[l.id] - STAIR_W / 2;
+    const b = STAIRS[l.id] + STAIR_W / 2;
+    const rects: Rect[] = [
+      [-h - T, -h - T, h + T, -h + T],
+      [-h - T, -h - T, -h + T, h + T],
+      [h - T, -h - T, h + T, h + T],
+      [-h - T, h - T, a, h + T],
+      [b, h - T, h + T, h + T],
+      [a - T, h, a + T, h + RUN],
+      [b - T, h, b + T, h + RUN],
+      ...SOLIDS[l.id],
+    ];
+    return [l.id, rects];
+  }),
+) as Record<StationId, Rect[]>;
+
+const pushed = new Vector3();
+const way = new Vector3();
+
+const inside = (x: number, z: number, [x0, z0, x1, z1]: Rect) => x >= x0 && x <= x1 && z >= z0 && z <= z1;
+const gap = (x: number, z: number, [x0, z0, x1, z1]: Rect) => Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(z0 - z, 0, z - z1));
+
+/** Moves a circle of radius r at local (x, z) out of a rect; a block no higher than a step above `floor` lets it climb on. */
+function clear(r: number, rect: Rect, floor: number) {
+  const [x0, z0, x1, z1, top] = rect;
+  if (top !== undefined && (top - floor <= STEP_UP || inside(local.x, local.z, rect))) return;
+  const dx = local.x - Math.min(x1, Math.max(x0, local.x));
+  const dz = local.z - Math.min(z1, Math.max(z0, local.z));
+  const d2 = dx * dx + dz * dz;
+  if (d2 >= r * r) return;
+  if (d2 > 1e-12) {
+    const d = Math.sqrt(d2);
+    local.x += (dx / d) * (r - d);
+    local.z += (dz / d) * (r - d);
+    return;
+  }
+  // the centre is inside: leave by the nearest side
+  const out = [local.x - x0, x1 - local.x, local.z - z0, z1 - local.z];
+  const i = out.indexOf(Math.min(...out));
+  if (i === 0) local.x = x0 - r;
+  else if (i === 1) local.x = x1 + r;
+  else if (i === 2) local.z = z0 - r;
+  else local.z = z1 + r;
+}
+
+/** Keeps the player off plinth edges and furniture: the steps are the only way up, and blocks climb a step at a time. */
+function bump(n: Vector3, radius: number, riders: Vector3[]) {
+  for (const l of LIST) {
+    if (n.dot(l.n) < 0.9) continue;
+    local.copy(n).multiplyScalar(R).applyMatrix4(l.inverse);
+    const x = local.x;
+    const z = local.z;
+    const r = radius / LANDMARK_SCALE;
+    const floor = ledge(l, x, z);
+    for (let pass = 0; pass < 2; pass++) for (const rect of WALLS[l.id]) clear(r, rect, floor);
+    if (local.x === x && local.z === z) continue;
+    pushed.copy(local).applyMatrix4(l.frame).normalize();
+    const d = arc(n, pushed);
+    if (d > 0) walk(n, toward(n, pushed, way), d, ...riders);
+  }
+}
+
+const CELL = 0.15;
+/** how far past the bottom step a path down ends, clear of the flight */
+const BEYOND = 0.8;
+const NEXT = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]] as const;
+
+/**
+ * Waypoints from n, on a plinth, round the furniture and down its steps to just past their foot,
+ * by a breadth-first search over a grid of the plinth. Empty off a plinth, or when no way is found.
+ */
+export function pathDown(n: Vector3, radius: number): Vector3[] {
+  const l = standing(n);
+  if (!l) return [];
+  const sx = STAIRS[l.id];
+  const h = l.half;
+  // a little under the walker's radius, so a gap it just squeezes through still counts
+  const r = (radius / LANDMARK_SCALE) * 0.9;
+  const cols = Math.ceil((2 * h) / CELL) + 1;
+  const rows = Math.ceil((2 * h + RUN + BEYOND) / CELL) + 1;
+  const xAt = (i: number) => -h + i * CELL;
+  const zAt = (j: number) => -h + j * CELL;
+  const open = new Uint8Array(cols * rows);
+  for (let j = 0; j < rows; j++)
+    for (let i = 0; i < cols; i++) {
+      const x = xAt(i);
+      const z = zAt(j);
+      const on = onTop(l, x, z) || (Math.abs(x - sx) <= STAIR_W / 2 && z > h);
+      // blocks you climb don't stand in the way
+      open[j * cols + i] = +(on && WALLS[l.id].every((rect) => rect[4] !== undefined || gap(x, z, rect) >= r));
+    }
+  const clampTo = (v: number, hi: number) => Math.min(hi, Math.max(0, Math.round(v)));
+  const start = clampTo((local.z + h) / CELL, rows - 1) * cols + clampTo((local.x + h) / CELL, cols - 1);
+  const prev = new Int32Array(cols * rows).fill(-1);
+  prev[start] = start;
+  const queue = [start];
+  let end = -1;
+  for (let q = 0; q < queue.length && end < 0; q++) {
+    const c = queue[q];
+    const i = c % cols;
+    const j = (c - i) / cols;
+    for (const [di, dj] of NEXT) {
+      const a = i + di;
+      const b = j + dj;
+      if (a < 0 || b < 0 || a >= cols || b >= rows) continue;
+      const k = b * cols + a;
+      // no cutting a corner past furniture
+      if (prev[k] >= 0 || !open[k] || (di && dj && (!open[j * cols + a] || !open[b * cols + i]))) continue;
+      prev[k] = c;
+      if (zAt(b) >= h + RUN + BEYOND - CELL) end = k;
+      queue.push(k);
+    }
+  }
+  if (end < 0) return [];
+  const cells: number[] = [];
+  for (let c = end; c !== start; c = prev[c]) cells.push(c);
+  cells.reverse();
+  // keep only the corners: a cell is dropped when its neighbours on both sides run in the same direction
+  return cells
+    .filter((c, k) => k === cells.length - 1 || c - (cells[k - 1] ?? start) !== cells[k + 1] - c)
+    .map((c) => new Vector3(xAt(c % cols), 0, zAt(Math.floor(c / cols))).applyMatrix4(l.frame).normalize());
 }
 
 /** The landmark whose footprint a walker of `radius` at n overlaps, if any. */
@@ -205,8 +358,8 @@ export const footprintAt = (n: Vector3, radius: number): Landmark | undefined =>
   LIST.find((l) => arc(n, l.n) < l.footprint + radius);
 
 /** Whether a walker of `radius` could never stand at n, because it lies inside an obstacle's footprint. */
-export const blocked = (n: Vector3, radius: number, swim = false) =>
-  OBSTACLES.some((o) => !(swim && o.sea) && arc(n, o.n) < o.r + radius);
+export const blocked = (n: Vector3, radius: number, player = false) =>
+  OBSTACLES.some((o) => !(player && (o.sea || o.station)) && arc(n, o.n) < o.r + radius);
 
 /** How far the feet sink into the water before the body floats and swims. */
 const SINK = 0.3;
@@ -229,10 +382,18 @@ const toGoal = new Vector3();
  * edge and turned into a slide, so a straight great-circle walk flows around landmarks.
  * Returns how hard the walker is pressed against something (0 free, 1 touching).
  */
-export function steer(n: Vector3, dir: Vector3, radius: number, goal: Vector3 | null, skip: Vector3 | null = null, swim = false): number {
+export function steer(
+  n: Vector3,
+  dir: Vector3,
+  radius: number,
+  goal: Vector3 | null,
+  skip: Vector3 | null = null,
+  swim = false,
+  stations = true,
+): number {
   let pressed = 0;
   for (const o of OBSTACLES) {
-    if (o.n === skip || (swim && o.sea)) continue;
+    if (o.n === skip || (swim && o.sea) || (!stations && o.station)) continue;
     const reach = o.r + radius;
     const cos = n.dot(o.n);
     if (cos < Math.cos((reach + 1.2) / R)) continue;
@@ -256,10 +417,12 @@ export function steer(n: Vector3, dir: Vector3, radius: number, goal: Vector3 | 
 /**
  * Hard constraint after a step: pops a walker back out of any footprint it slid into.
  * `skip` is the centre of a landmark the walker may stand on, for villagers working there.
+ * The player swims, and climbs onto plinths by their steps.
  */
-export function resolve(n: Vector3, radius: number, skip: Vector3 | null, swim: boolean, ...riders: Vector3[]) {
+export function resolve(n: Vector3, radius: number, skip: Vector3 | null, player: boolean, ...riders: Vector3[]) {
+  if (player) bump(n, radius, riders);
   for (const o of OBSTACLES) {
-    if (o.n === skip || (swim && o.sea)) continue;
+    if (o.n === skip || (player && (o.sea || o.station))) continue;
     const reach = o.r + radius;
     const d = arc(n, o.n);
     if (d >= reach) continue;
