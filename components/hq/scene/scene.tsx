@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import type { StationId } from "@/data/stations";
 import type { GameState } from "../game";
@@ -71,6 +71,25 @@ export default function Scene({ state, target, room, onTravel, onOpen, onNext, o
       <CameraRig />
       <ClickToMove onTravel={onTravel} />
       <MinimapView />
+      {INFO && <Info />}
     </Canvas>
   );
+}
+
+const INFO = process.env.NODE_ENV !== "production" && typeof location !== "undefined" && new URLSearchParams(location.search).has("info");
+
+/** `?info` in dev: logs the fewest and most draw calls per frame over two seconds, minimap passes included. */
+const seen = { n: 0, lo: Infinity, hi: 0 };
+function Info() {
+  useFrame(({ gl }) => {
+    gl.info.autoReset = false;
+    const calls = gl.info.render.calls;
+    gl.info.reset();
+    // skip the first second while shaders compile and the crowd drops in
+    if (++seen.n < 60 || seen.n > 180) return;
+    seen.lo = Math.min(seen.lo, calls);
+    seen.hi = Math.max(seen.hi, calls);
+    if (seen.n === 180) console.log(`draw calls ${seen.lo}-${seen.hi}`);
+  });
+  return null;
 }

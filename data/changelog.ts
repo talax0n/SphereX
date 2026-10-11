@@ -8,6 +8,20 @@ export interface Release {
 /** newest first */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.9.0",
+    date: "2026-10-11",
+    title: "Everyone is someone",
+    notes: [
+      "People now have faces that smile, grin, gasp or beam.",
+      "Everyone wears real outfits, with sleeves, hands, and trousers, skirts or dresses.",
+      "Some wear hoodies, jackets, overalls or stripes.",
+      "Most people have hair, from curls and buns to pigtails and long hair.",
+      "Each keeper dresses for their station and holds a tool of their job, like a trophy or a wrench.",
+      "The station keepers get on with their jobs, take little walks and wave when you come over.",
+      "Kids now walk around too, and grown-ups come in different heights and builds.",
+    ],
+  },
+  {
     version: "1.8.0",
     date: "2026-10-11",
     title: "Step inside",

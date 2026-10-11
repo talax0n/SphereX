@@ -4,6 +4,7 @@ import { Html } from "@react-three/drei";
 import {
   type BufferGeometry,
   Euler,
+  type Group,
   type Material,
   type InstancedMesh,
   Matrix4,
@@ -17,24 +18,29 @@ import { STATION_BY_ID, type StationId } from "@/data/stations";
 import { DROP_IN, HOVER, ctl, setGesture } from "../game";
 import { ACCENT, CLAY } from "./clay";
 import {
-  HATS,
-  HEAD_Y,
   HOP,
   KING,
   PARTS,
+  PLAYER,
   RADIUS,
-  PLAIN,
+  RIG,
   SCALE,
+  WEAR,
   type Folk,
-  type Hat,
+  type Wear,
   type Villager,
-  VISITORS,
   animate,
+  dressUp,
+  limbs,
   lookOf,
   makeCrowd,
   move,
+  skull,
+  sleeve,
+  stepKeeper,
   stepVillager,
   stepVisitor,
+  worn,
 } from "./folk";
 import { IDLES, type Gesture, type Pose, blankPose, chasePose, mirrorPose, mixPose, onceOf, poseOf } from "./gesture";
 import { LANDMARKS, R, SEA_LEVEL, arc, depthAt, flatten, frameAt, pathDown, plinthAt, standLift, steer, swimming, toward } from "./planet";
@@ -52,12 +58,10 @@ const folk = makeCrowd(ctl.player);
 const N = folk.length;
 ctl.villagers = folk.filter((f) => f.kind === "villager");
 ctl.visitors = folk.filter((f) => f.kind === "visitor");
-const hatSlots = Object.fromEntries(HATS.map((h) => [h, folk.filter((f) => f.hat === h)])) as Record<Hat, Folk[]>;
-/** a visitor's hat can be any kind, so each hat mesh keeps one spare instance per visitor slot after the fixed ones */
-const hatBase = Object.fromEntries(HATS.map((h) => [h, hatSlots[h].length])) as Record<Hat, number>;
-/** the crown keeps one more instance after the visitors' for the player, who wears it once the room crowns them */
-const MY_CROWN = hatBase.crown + VISITORS;
-const plain = { shirt: folk[0].shirt.clone(), foot: folk[0].foot.clone() };
+const keepers = Object.fromEntries(folk.flatMap((f) => (f.kind === "keeper" ? [[f.station, f]] : []))) as Record<
+  StationId,
+  Extract<Folk, { kind: "keeper" }>
+>;
 
 const blobMat = new MeshBasicMaterial({ map: blobTexture(), transparent: true, depthWrite: false });
 const haloMat = new MeshBasicMaterial({ color: ACCENT });
@@ -106,13 +110,9 @@ const isIdle = (g: Gesture) => (IDLES as readonly Gesture[]).includes(g);
 const shown = blankPose();
 const from = blankPose();
 const live = blankPose();
-/** keepers never gesture; villagers carry their own pose */
-const STILL = blankPose();
 const aim = blankPose();
-const poseFor = (f: Folk): Pose =>
-  f.kind === "player" ? shown : f.kind === "villager" || f.kind === "visitor" ? f.pose : STILL;
+const poseFor = (f: Folk): Pose => (f.kind === "player" ? shown : f.pose);
 
-const ONE = new Vector3(1, 1, 1);
 const base = new Matrix4();
 const torso = new Matrix4();
 const local = new Matrix4();
@@ -126,10 +126,8 @@ const right = new Vector3();
 const before = new Vector3();
 const eul = new Euler();
 const rotXZ = (x: number, z: number) => q.setFromEuler(eul.set(x, 0, z));
-// arms pitch before they raise, so a positive pitch always swings the hand forward, hanging or overhead
-const armEul = new Euler(0, 0, 0, "ZYX");
 const headM = new Matrix4();
-const slot: Record<Hat, number> = { beanie: 0, cap: 0, ears: 0, crown: 0 };
+const rig = Array.from({ length: RIG }, () => new Matrix4());
 const NONE = new Matrix4().makeScale(0, 0, 0);
 
 /** Writes the walk direction to `input` and returns its strength: keys are all or nothing, the stick is analog. */
@@ -213,15 +211,6 @@ function faceInto(dt: number) {
   const off = Math.atan2(v.crossVectors(ctl.north, into).dot(p.n), ctl.north.dot(into));
   ctl.north.applyAxisAngle(p.n, off * Math.min(1, dt * 5));
   flatten(ctl.north, p.n);
-}
-
-function stepKeeper(f: Extract<Folk, { kind: "keeper" }>, dt: number) {
-  const close = arc(f.n, ctl.player.n) < 3.2;
-  toward(f.n, close ? ctl.player.n : v.copy(f.n).add(f.rest), dir);
-  const turn = Math.atan2(v.crossVectors(f.heading, dir).dot(f.n), f.heading.dot(dir));
-  f.heading.lerp(dir, Math.min(1, dt * 5));
-  flatten(f.heading, f.n);
-  return turn * 0.3;
 }
 
 /** Hover, fall and touchdown for the player; the reducer only learns about it through `ctl.intro`. */
@@ -346,9 +335,13 @@ function stepGesture(f: Folk, dt: number) {
   mixPose(from, live, g.blend, shown);
 }
 
+/** Girth and height come in as a scale on the ground frame, so feet, arms, hats and the shadow follow. */
+const size = (f: Folk) => base.scale(v.set(f.build, f.height, f.build));
+
 /** Writes the surface frame to `base` and the torso bone (bob, waddle, lean, squash, hop) to `torso`. */
 function pose(f: Folk, g: Pose, i: number, lift: number): number {
   frameAt(f.n, f.heading, base, lift, SCALE);
+  size(f);
   // lying down tips the whole body back about the feet, so the face ends up to the sky
   if (g.lie) base.multiply(hang.makeRotationX((-g.lie * Math.PI) / 2));
   const step = Math.sin(f.phase);
@@ -368,114 +361,88 @@ function pose(f: Folk, g: Pose, i: number, lift: number): number {
   return step;
 }
 
-const SHOULDER = 0.18;
-
-interface Meshes {
-  head: InstancedMesh | null;
-  face: InstancedMesh | null;
-  body: InstancedMesh | null;
-  nub: InstancedMesh | null;
-  blob: InstancedMesh | null;
-  beanie: InstancedMesh | null;
-  cap: InstancedMesh | null;
-  ears: InstancedMesh | null;
-  crown: InstancedMesh | null;
-}
-
 interface CrowdProps {
   near: StationId | null;
   onOpen: (id: StationId) => void;
 }
 
-/** Every character, the player included, in eight instanced draw calls and one frame loop. */
-const meshes: Meshes = {
-  head: null,
-  face: null,
-  body: null,
-  nub: null,
-  blob: null,
-  beanie: null,
-  cap: null,
-  ears: null,
-  crown: null,
-};
+type Layer = "head" | "body" | "nub" | "blob" | Wear;
+const KINDS = Object.keys(WEAR) as Wear[];
+
+/** feet, sleeves and hands, in `limbs` order */
+const NUBS = 6;
+/** One instance per folk in every mesh (six for the nubs), the instance index being the folk index. */
+const LAYERS: [Layer, BufferGeometry, Material, number][] = [
+  ["head", PARTS.head, CLAY, N],
+  ["body", PARTS.body, CLAY, N],
+  ["nub", PARTS.nub, CLAY, N * NUBS],
+  ["blob", PARTS.blob, blobMat, N],
+  ...KINDS.map((k): [Layer, BufferGeometry, Material, number] => [k, WEAR[k].geo, CLAY, N]),
+];
+const meshes = Object.fromEntries(LAYERS.map(([k]) => [k, null])) as Record<Layer, InstancedMesh | null>;
 /** Stable ref callbacks, so React doesn't detach and reattach each mesh on every render. */
 const bind = Object.fromEntries(
-  (Object.keys(meshes) as (keyof Meshes)[]).map((k) => [
+  LAYERS.map(([k]) => [
     k,
     (mesh: InstancedMesh | null) => {
       meshes[k] = mesh;
     },
   ]),
-) as Record<keyof Meshes, (mesh: InstancedMesh | null) => void>;
+) as Record<Layer, (mesh: InstancedMesh | null) => void>;
 
-const LAYERS: [keyof Meshes, BufferGeometry, Material, number][] = [
-  ["head", PARTS.head, CLAY, N],
-  ["face", PARTS.face, CLAY, N],
-  ["body", PARTS.body, CLAY, N],
-  ["nub", PARTS.nub, CLAY, N * 4],
-  ["blob", PARTS.blob, blobMat, N],
-  ...HATS.map((h): [Hat, BufferGeometry, Material, number] => [h, PARTS[h], CLAY, hatBase[h] + VISITORS + (h === "crown" ? 1 : 0)]),
-];
+/** What each folk has on, by index; the frame loop only poses these. */
+const kit: Wear[][] = folk.map(() => []);
+/** wearers of each kind on screen this frame; a kind nobody wears isn't drawn */
+const used = new Set<Wear>();
 
-/** Dresses a visitor's or the player's instances; run when their look changes, since colours are otherwise set once. */
-function dress(i: number, f: Folk, hatAt: number) {
+/** Dresses a character's instances; run when their look changes, since colours are otherwise set once. */
+function dress(i: number, f: Folk) {
   const { head, body, nub } = meshes;
   head?.setColorAt(i, f.skin);
   body?.setColorAt(i, f.shirt);
-  nub?.setColorAt(i * 4, f.foot);
-  nub?.setColorAt(i * 4 + 1, f.foot);
-  nub?.setColorAt(i * 4 + 2, f.skin);
-  nub?.setColorAt(i * 4 + 3, f.skin);
-  const hat = f.hat && meshes[f.hat];
-  if (hat) hat.setColorAt(hatAt, f.hatColor);
-  for (const mesh of [head, body, nub, hat]) if (mesh?.instanceColor) mesh.instanceColor.needsUpdate = true;
+  const arm = sleeve(f);
+  [f.foot, f.foot, arm, arm, f.skin, f.skin].forEach((c, k) => nub?.setColorAt(i * NUBS + k, c));
+  const on = worn(f);
+  // what they took off stays hidden until they put it on again
+  for (const k of kit[i]) meshes[k]?.setMatrixAt(i, NONE);
+  kit[i] = on.map(([k]) => k);
+  for (const [k, color] of on) meshes[k]?.setColorAt(i, color);
+  for (const mesh of Object.values(meshes)) if (mesh?.instanceColor) mesh.instanceColor.needsUpdate = true;
 }
 
 export function Crowd({ near, onOpen }: CrowdProps) {
   const halo = useRef<Mesh>(null);
   const puff = useRef<Mesh>(null);
+  const bubble = useRef<Group>(null);
   const stuck = useMemo(() => ({ t: 0 }), []);
   const crowned = useRef(false);
 
   useEffect(() => {
-    const { head, face, body, nub } = meshes;
-    folk.forEach((f, i) => {
-      head?.setColorAt(i, f.skin);
-      face?.setColorAt(i, PLAIN);
-      body?.setColorAt(i, f.shirt);
-      nub?.setColorAt(i * 4, f.foot);
-      nub?.setColorAt(i * 4 + 1, f.foot);
-      nub?.setColorAt(i * 4 + 2, f.skin);
-      nub?.setColorAt(i * 4 + 3, f.skin);
-    });
-    for (const h of HATS) hatSlots[h].forEach((f, j) => meshes[h]?.setColorAt(j, f.hatColor));
-    for (const mesh of Object.values(meshes)) if (mesh?.instanceColor) mesh.instanceColor.needsUpdate = true;
+    for (const k of KINDS) for (let i = 0; i < N; i++) meshes[k]?.setMatrixAt(i, NONE);
+    folk.forEach((f, i) => dress(i, f));
   }, []);
 
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.1) * TIME_SCALE;
-    const { head, face, body, nub, blob, beanie, cap, ears, crown } = meshes;
-    if (!head || !face || !body || !nub || !blob || !beanie || !cap || !ears || !crown) return;
-    slot.beanie = slot.cap = slot.ears = slot.crown = 0;
+    const { head, body, nub, blob } = meshes;
+    if (!head || !body || !nub || !blob) return;
+    for (const k of KINDS) if (!meshes[k]) return;
     if (crowned.current !== ctl.king) {
       crowned.current = ctl.king;
-      const me = folk[0];
-      Object.assign(me, ctl.king ? { shirt: KING.shirt, foot: KING.foot } : plain);
-      dress(0, { ...me, hat: "crown", hatColor: KING.hatColor }, MY_CROWN);
+      dress(0, Object.assign(folk[0], dressUp(PLAYER, ctl.king ? KING : {})));
     }
 
+    used.clear();
     for (let i = 0; i < N; i++) {
       const f = folk[i];
       if (f.kind === "visitor" && f.fresh && f.shown) {
-        Object.assign(f, lookOf(f.look), f.king ? KING : {});
-        if (f.hat) dress(i, f, hatBase[f.hat] + f.slot);
+        Object.assign(f, dressUp(lookOf(f.look), f.king ? KING : {}));
+        dress(i, f);
       }
       if ((f.kind === "villager" || f.kind === "visitor") && !f.shown) {
-        for (const m of [head, face, body, blob]) m.setMatrixAt(i, NONE);
-        for (let k = 0; k < 4; k++) nub.setMatrixAt(i * 4 + k, NONE);
-        if (f.kind === "visitor") for (const h of HATS) meshes[h]?.setMatrixAt(hatBase[h] + f.slot, NONE);
-        else if (f.hat) meshes[f.hat]?.setMatrixAt(slot[f.hat]++, NONE);
+        for (const m of [head, body, blob]) m.setMatrixAt(i, NONE);
+        for (let k = 0; k < NUBS; k++) nub.setMatrixAt(i * NUBS + k, NONE);
+        for (const k of kit[i]) meshes[k]?.setMatrixAt(i, NONE);
         continue;
       }
       let turn = 0;
@@ -490,7 +457,7 @@ export function Crowd({ near, onOpen }: CrowdProps) {
         floor = ctl.intro === "ground" ? self.ground : 0;
         // gesture bounces lift the whole body, feet and all, unlike the torso-only greeting hop
         lift = floor + ctl.alt + shown.bounce + (ctl.intro === "hover" && !reduced?.matches ? Math.sin(drop.t * 2.2) * 0.07 : 0);
-      } else if (f.kind === "keeper") turn = stepKeeper(f, dt);
+      } else if (f.kind === "keeper") turn = stepKeeper(f, dt, ctl.player.n, reduced?.matches ? 0 : 1);
       else if (f.kind === "visitor") {
         turn = stepVisitor(f, dt, reduced?.matches ? 0 : 1, aim);
         floor = f.lift;
@@ -510,57 +477,23 @@ export function Crowd({ near, onOpen }: CrowdProps) {
       const g = poseFor(f);
       const step = pose(f, g, i, lift);
 
-      let skull = torso;
-      if (g.headYaw) {
-        // turn the head about the neck, not the feet
-        local.makeTranslation(0, HEAD_Y, 0).multiply(hang.makeRotationY(g.headYaw));
-        skull = headM.multiplyMatrices(torso, local).multiply(hang.makeTranslation(0, -HEAD_Y, 0));
-      }
-      head.setMatrixAt(i, skull);
-      face.setMatrixAt(i, skull);
+      const flail = f.kind === "player" ? drop.flail : f.kind === "villager" && f.alt > 0 ? 1 : 0;
+      limbs(base, torso, g, step, f.amp, flail, drop.t * 26 + i, rig);
+      for (let k = 0; k < NUBS; k++) nub.setMatrixAt(i * NUBS + k, rig[k]);
+      const nod = skull(torso, f.head, g.headYaw, headM);
+      head.setMatrixAt(i, nod);
       body.setMatrixAt(i, torso);
-      if (f.kind === "visitor") for (const h of HATS) meshes[h]?.setMatrixAt(hatBase[h] + f.slot, h === f.hat ? skull : NONE);
-      else if (f.kind === "player") {
-        // the beanie keeps its slot, so the hats after it keep their colours
-        if (f.hat) meshes[f.hat]?.setMatrixAt(slot[f.hat]++, ctl.king ? NONE : skull);
-        crown.setMatrixAt(MY_CROWN, ctl.king ? skull : NONE);
-      } else if (f.hat) meshes[f.hat]?.setMatrixAt(slot[f.hat]++, skull);
-
-      for (let k = 0; k < 2; k++) {
-        const side = k ? 1 : -1;
-        const swing = step * side * f.amp;
-        // feet hang off the ground frame, not the torso, so the waddle never lifts them through the floor
-        const tap = k ? g.tap * 0.1 : 0;
-        local.compose(
-          v.set(side * 0.1, 0.06 + Math.max(0, swing) * 0.06 + tap, 0.03 + swing * 0.1 + tap * 0.4),
-          q.identity(),
-          s.set(0.09, 0.065, 0.125),
-        );
-        nub.setMatrixAt(i * 4 + k, local.premultiply(base));
-        // gestures lead with the right arm (k 0), the side away from the intro bubble
-        let raise = k ? g.armL : g.armR;
-        const fwd = swing * 0.6 * g.swing + (k ? g.fwdL : g.fwdR);
-        let grow = g.grow;
-        const flail = f.kind === "player" ? drop.flail : f.kind === "villager" && f.alt > 0 ? 1 : 0;
-        if (flail) {
-          raise += (2.3 + Math.sin(drop.t * 26 + k * 2 + i) * 0.35 - raise) * flail;
-          grow = Math.max(grow, flail);
-        }
-        // a raised arm steps out from the shoulder and grows, so the hand clears the head and reads at close range
-        local.compose(
-          v.set(side * (SHOULDER + 0.06 * grow), 0.42, 0),
-          q.setFromEuler(armEul.set(-fwd, 0, side * raise)),
-          ONE,
-        );
-        hang.compose(
-          v.set(0, -0.09 - 0.07 * grow, 0),
-          q.identity(),
-          s.set(0.065 + 0.02 * grow, 0.12 + 0.07 * grow, 0.07 + 0.02 * grow),
-        );
-        nub.setMatrixAt(i * 4 + 2 + k, local.multiply(hang).premultiply(torso));
+      for (const k of kit[i]) {
+        const bone = WEAR[k].bone;
+        meshes[k]?.setMatrixAt(i, bone === "head" ? nod : bone === "hand" ? rig[6] : torso);
+        used.add(k);
       }
+
       // shadows stay on the floor and tighten as the player comes down to meet them; a body lying down hides its own
-      if (lift !== floor || g.lie) frameAt(f.n, f.heading, base, floor, SCALE);
+      if (lift !== floor || g.lie) {
+        frameAt(f.n, f.heading, base, floor, SCALE);
+        size(f);
+      }
       // under water there's no shadow to cast, only the swimmer's own ripple
       const dry = f.kind === "player" ? +!self.wet : f.kind === "visitor" ? +!swimming(f.n) : 1;
       const shade = 1.15 * (1 - Math.min(0.45, (lift - floor) * 0.13)) * (1 - g.lie) * dry;
@@ -570,6 +503,12 @@ export function Crowd({ near, onOpen }: CrowdProps) {
         halo.current.visible = ctl.intro === "ground";
         frameAt(f.n, f.heading, halo.current.matrix, (depthAt(f.n) > 0 ? Math.max(self.ground, SEA_LEVEL) : self.ground) + 0.04);
       }
+    }
+
+    // the bubble rides over its keeper's head while they stroll
+    if (bubble.current && near) {
+      const k = keepers[near];
+      bubble.current.position.copy(k.n).multiplyScalar(R + 1.15);
     }
 
     if (puff.current) {
@@ -584,15 +523,8 @@ export function Crowd({ near, onOpen }: CrowdProps) {
       }
     }
 
-    head.instanceMatrix.needsUpdate = true;
-    face.instanceMatrix.needsUpdate = true;
-    body.instanceMatrix.needsUpdate = true;
-    nub.instanceMatrix.needsUpdate = true;
-    blob.instanceMatrix.needsUpdate = true;
-    beanie.instanceMatrix.needsUpdate = true;
-    cap.instanceMatrix.needsUpdate = true;
-    ears.instanceMatrix.needsUpdate = true;
-    crown.instanceMatrix.needsUpdate = true;
+    for (const k of KINDS) if (meshes[k]) meshes[k].visible = used.has(k);
+    for (const mesh of Object.values(meshes)) if (mesh) mesh.instanceMatrix.needsUpdate = true;
   });
 
   const keeperHead = near && LANDMARKS[near].keeper.clone().multiplyScalar(R + 1.15);
@@ -619,17 +551,19 @@ export function Crowd({ near, onOpen }: CrowdProps) {
         renderOrder={2}
       />
       {keeperHead && (
-        <Html key={near} position={keeperHead} center zIndexRange={[14, 0]}>
-          <button
-            type="button"
-            onClick={() => onOpen(near)}
-            className="hq-bubble relative w-max max-w-[220px] rounded-2xl border border-hq-line bg-white px-3 py-2 text-left text-[12px] leading-snug text-hq-ink shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] max-sm:max-w-[180px] max-sm:text-[11px]"
-          >
-            {STATION_BY_ID[near].line}{" "}
-            <span className="font-semibold text-hq-accent pointer-coarse:hidden">Press E</span>
-            <span className="hidden font-semibold text-hq-accent pointer-coarse:inline">Tap to open</span>
-          </button>
-        </Html>
+        <group key={near} ref={bubble} position={keeperHead}>
+          <Html center zIndexRange={[14, 0]}>
+            <button
+              type="button"
+              onClick={() => onOpen(near)}
+              className="hq-bubble relative w-max max-w-[220px] rounded-2xl border border-hq-line bg-white px-3 py-2 text-left text-[12px] leading-snug text-hq-ink shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] max-sm:max-w-[180px] max-sm:text-[11px]"
+            >
+              {STATION_BY_ID[near].line}{" "}
+              <span className="font-semibold text-hq-accent pointer-coarse:hidden">Press E</span>
+              <span className="hidden font-semibold text-hq-accent pointer-coarse:inline">Tap to open</span>
+            </button>
+          </Html>
+        </group>
       )}
     </>
   );

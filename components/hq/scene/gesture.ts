@@ -21,7 +21,16 @@ export type Gesture =
   | "press"
   | "pedal"
   | "punch"
-  | "sleep";
+  | "sleep"
+  /** keeper chores: each one works the prop in the right hand */
+  | "study"
+  | "tinker"
+  | "check"
+  | "fix"
+  | "show"
+  | "sip"
+  | "sort"
+  | "read";
 
 export const IDLES = ["idleLook", "idleStretch", "idleTap", "idleSway"] as const satisfies readonly Gesture[];
 
@@ -48,9 +57,11 @@ export interface Pose {
   tap: number;
   /** 0 upright, 1 flat on the back, pivoting at the feet so the head ends up behind */
   lie: number;
+  /** 0 the held item turns with the arm, 1 the wrist keeps it hanging upright however the arm moves */
+  level: number;
 }
 
-const KEYS = ["armR", "fwdR", "armL", "fwdL", "grow", "swing", "lean", "bounce", "headYaw", "squash", "tap", "lie"] as const;
+const KEYS = ["armR", "fwdR", "armL", "fwdL", "grow", "swing", "lean", "bounce", "headYaw", "squash", "tap", "lie", "level"] as const;
 
 export const blankPose = (): Pose => ({
   armR: 0.55,
@@ -65,6 +76,7 @@ export const blankPose = (): Pose => ({
   squash: 0,
   tap: 0,
   lie: 0,
+  level: 0,
 });
 
 const REST = blankPose();
@@ -299,6 +311,131 @@ const MOVES: Record<Gesture, Move> = {
       p.swing = 0;
       p.headYaw = 0.35;
       p.squash = Math.sin(t * 1.3) * 0.06 * m;
+    },
+  },
+  study: {
+    // the blueprint held up in front, the head tilting over it, a nod now and then
+    set(p, t, m) {
+      const nod = Math.max(0, Math.sin(t * 1.1)) ** 6 * m;
+      p.armR = 1.05;
+      p.fwdR = 2.05;
+      p.armL = 0.45;
+      p.fwdL = 0.3;
+      p.grow = 0.7;
+      p.level = 1;
+      p.swing = 0;
+      p.headYaw = Math.sin(t * 0.8) * 0.3 * m;
+      p.lean = 0.05 + Math.sin(t * 0.8) * 0.04 * m;
+      p.bounce = nod * 0.03;
+      p.squash = nod * 0.05;
+    },
+  },
+  tinker: {
+    // the laptop held at chest height, the left hand pecking at it
+    set(p, t, m) {
+      p.armR = 1.3;
+      p.fwdR = 1.9;
+      p.armL = 1.3;
+      p.fwdL = 1.9 + Math.max(0, Math.sin(t * 15)) * 0.2 * m;
+      p.grow = 0.3;
+      p.level = 1;
+      p.swing = 0;
+      p.headYaw = Math.sin(t * 0.9) * 0.2 * m;
+      p.squash = 0.05;
+      p.bounce = Math.abs(Math.sin(t * 15)) * 0.006 * m;
+    },
+  },
+  check: {
+    // the briefcase swings a little while the left wrist lifts for a look at the watch
+    set(p, t, m) {
+      const look = swell(t % 5, 0.5, 2.2) * m;
+      p.armR = 0.45 + Math.sin(t * 2.2) * 0.1 * m;
+      p.fwdR = Math.sin(t * 2.2) * 0.2 * m;
+      p.armL = 0.55 + look * 0.6;
+      p.fwdL = look * 1.9;
+      p.grow = look * 0.3;
+      p.swing = 0;
+      p.headYaw = look * 0.55;
+      p.lean = -look * 0.05;
+    },
+  },
+  fix: {
+    // the wrench out in front, turned in short sharp twists
+    set(p, t, m) {
+      const k = (t * 1.6) % 1;
+      const twist = (smooth(k / 0.12) - smooth((k - 0.35) / 0.2)) * m;
+      p.armR = 0.6 + twist * 0.25;
+      p.fwdR = 1.3 + twist * 0.3;
+      p.armL = 0.45;
+      p.fwdL = 0.25;
+      p.grow = 0.6;
+      p.swing = 0;
+      p.lean = 0.06 + twist * 0.06;
+      p.headYaw = -0.25;
+      p.squash = twist * 0.04;
+    },
+  },
+  show: {
+    // the trophy hoisted beside the head every few seconds with a proud little bounce
+    set(p, t, m) {
+      const up = swell(t % 4, 0.45, 1.8) * m;
+      const hop = Math.abs(Math.sin(t * 7)) * up;
+      p.armR = 0.6 + up * 2.3;
+      p.fwdR = 0.5 - up * 0.3;
+      p.armL = 0.5;
+      p.grow = 0.5 + up * 0.5;
+      p.level = 1;
+      p.swing = 0;
+      p.lean = up * 0.05;
+      p.bounce = hop * 0.08;
+      p.squash = 0.04 - hop * 0.08;
+      p.headYaw = Math.sin(t * 0.6) * 0.15 * m;
+    },
+  },
+  sip: {
+    // the mug up to the mouth, a pause, then down again
+    set(p, t, m) {
+      const up = swell(t % 4.5, 0.6, 2.4) * m;
+      p.armR = 0.6 + up * 0.9;
+      p.fwdR = 0.7 + up * 1.55;
+      p.armL = 0.5;
+      p.grow = 0.4 + up * 0.4;
+      p.level = 1;
+      p.swing = 0;
+      p.lean = -up * 0.04;
+      p.squash = up * -0.03;
+      p.headYaw = (1 - up) * Math.sin(t * 0.7) * 0.25 * m;
+    },
+  },
+  sort: {
+    // the envelope lifted to peek at, flipped over, then lowered
+    set(p, t, m) {
+      const k = (t % 5) / 5;
+      const up = smooth(k / 0.15) * (1 - smooth((k - 0.8) / 0.15)) * m;
+      const flip = Math.sin(smooth((k - 0.45) / 0.15) * Math.PI) * up;
+      p.armR = 0.6 + up * 0.8;
+      p.fwdR = 0.5 + up * 1.7 + flip * 0.2;
+      p.armL = 0.5;
+      p.grow = 0.3 + up * 0.4;
+      p.level = 1 - flip * 0.7;
+      p.swing = 0;
+      p.headYaw = up * 0.3;
+      p.lean = flip * 0.05;
+    },
+  },
+  read: {
+    // the paper held up in front of the face with both hands, a page-turn flick now and then
+    set(p, t, m) {
+      const k = (t % 4.5) / 4.5;
+      const turn = Math.sin(smooth((k - 0.7) / 0.1) * Math.PI) * m;
+      p.armR = 1.1;
+      p.fwdR = 2.15 + turn * 0.1;
+      p.armL = 1.1 + turn * 0.3;
+      p.fwdL = 2.15 - turn * 0.2;
+      p.grow = 0.8;
+      p.level = 1;
+      p.swing = 0;
+      p.lean = Math.sin(t * 0.7) * 0.03 * m;
     },
   },
 };

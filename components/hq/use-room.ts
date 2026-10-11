@@ -149,7 +149,7 @@ export function useRoom(active: boolean): Room {
       v.peer = p.id;
       v.look = p.look;
       v.to.set(...p.n);
-      v.face.set(...p.h);
+      v.facing.set(...p.h);
       v.emote = null;
       v.gest = "rest";
       v.shown = v.fresh = true;
@@ -223,7 +223,7 @@ export function useRoom(active: boolean): Room {
           const v = seats.get(m.id);
           if (v) {
             v.to.set(...m.n);
-            v.face.set(...m.h);
+            v.facing.set(...m.h);
           }
           break;
         }
