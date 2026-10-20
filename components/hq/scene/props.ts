@@ -404,3 +404,32 @@ export function blobTexture(): CanvasTexture {
   g.fillRect(0, 0, 64, 64);
   return new CanvasTexture(c);
 }
+
+const DEG = Math.PI / 180;
+
+/** A ring of puffy clouds in a band of polar angles, kept clear of the stations' latitudes as they drift about the pole. */
+export function clouds(seed: number, count: number, polar: [number, number], size: number, lift: [number, number]): BufferGeometry {
+  const rand = rng(seed);
+  const m = new Matrix4();
+  const list = Array.from({ length: count }, () => {
+    const p = polar[0] + rand() * (polar[1] - polar[0]);
+    const az = rand() * Math.PI * 2;
+    const n = new Vector3(Math.sin(p * DEG) * Math.cos(az), Math.cos(p * DEG), Math.sin(p * DEG) * Math.sin(az));
+    const up = lift[0] + rand() * (lift[1] - lift[0]);
+    const s = size * (0.75 + rand() * 0.5);
+    const puffs = 3 + Math.floor(rand() * 4);
+    const parts = Array.from({ length: puffs }, (_, i) => {
+      const x = (i / (puffs - 1) - 0.5) * 1.6 * s;
+      const r = (1 - Math.abs(x / s) * 0.6) * (0.75 + rand() * 0.35) * s;
+      return part(ball(0.5, 10, 7), [x, r * 0.15, (rand() - 0.5) * 0.4 * s], { scale: [r, r * 0.62, r * 0.85] });
+    });
+    const g = merge(parts).applyMatrix4(frameAt(n, toward(n, scatter(rand, new Vector3()), new Vector3()), m, up));
+    const c = n.clone().multiplyScalar(R + up);
+    const at = new Float32Array(g.getAttribute("position").count * 3);
+    for (let i = 0; i < at.length; i += 3) c.toArray(at, i);
+    return g.setAttribute("centre", new Float32BufferAttribute(at, 3));
+  });
+  const out = mergeGeometries(list, false);
+  list.forEach((g) => g.dispose());
+  return out;
+}

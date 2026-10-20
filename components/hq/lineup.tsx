@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Html, OrthographicCamera } from "@react-three/drei";
 import { Color, Euler, type InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, Vector3 } from "three";
 import { STATIONS } from "@/data/stations";
 import { CLAY } from "./scene/clay";
+import { useModel } from "./scene/models";
 import {
   BACKS,
+  BLOB,
   BOTTOMS,
   CHORE,
   EYES,
@@ -16,7 +18,6 @@ import {
   HATS,
   KING,
   NECKS,
-  PARTS,
   PLAIN,
   PLAYER,
   PROPS,
@@ -151,21 +152,22 @@ function Folks({ who, back, spin, at, yaw }: { who: Who[]; back: boolean; spin: 
     if (++frames.current === 10) document.body.dataset.ready = "";
   });
 
-  const layers: [string, typeof PARTS.head, number][] = [
-    ["head", PARTS.head, n],
-    ["body", PARTS.body, n],
-    ["nub", PARTS.nub, n * 6],
-    ...KINDS.map((k): [string, typeof PARTS.head, number] => [k, WEAR[k].geo, n]),
+  const baked = useModel("folk");
+  const layers: [string, number][] = [
+    ["head", n],
+    ["body", n],
+    ["nub", n * 6],
+    ...KINDS.map((k): [string, number] => [k, n]),
   ];
   return (
     <>
-      {layers.map(([k, geo, count]) => (
+      {layers.map(([k, count]) => (
         <instancedMesh
           key={k}
           ref={(mesh) => {
             meshes.current[k] = mesh;
           }}
-          args={[geo, CLAY, count]}
+          args={[baked[k], CLAY, count]}
           frustumCulled={false}
         />
       ))}
@@ -173,7 +175,7 @@ function Folks({ who, back, spin, at, yaw }: { who: Who[]; back: boolean; spin: 
         ref={(mesh) => {
           meshes.current.blob = mesh;
         }}
-        args={[PARTS.blob, blobMat, n]}
+        args={[BLOB, blobMat, n]}
         frustumCulled={false}
         renderOrder={1}
       />
@@ -202,7 +204,9 @@ export function Lineup({ back, spin, view, at, yaw }: { back: boolean; spin: boo
         />
         <hemisphereLight args={["#eaf2ff", "#f3e3c8", 1.1]} />
         <directionalLight color="#fff3e2" intensity={2.1} position={[-4, 8, 10]} />
-        <Folks who={who} back={back} spin={spin} at={at} yaw={yaw} />
+        <Suspense fallback={null}>
+          <Folks who={who} back={back} spin={spin} at={at} yaw={yaw} />
+        </Suspense>
       </Canvas>
     </main>
   );

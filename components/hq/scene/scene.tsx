@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { PerformanceMonitor } from "@react-three/drei";
 import type { StationId } from "@/data/stations";
@@ -61,20 +61,25 @@ export default function Scene({ state, room, onTravel, onOpen, onNext, onSkip, o
     >
       <PerformanceMonitor onChange={({ factor }) => setDpr(1 + (MAX_DPR - 1) * factor)} />
       <Daylight />
-      <Crowd near={near} onOpen={onOpen} />
+      <Suspense>
+        <Crowd near={near} onOpen={onOpen} />
+      </Suspense>
       {state.mode === "onboarding" && (
         <IntroBubble step={state.step} onNext={onNext} onSkip={onSkip} onShown={onBubbleShown} appear={bubbleAppear} />
       )}
       <CameraRig />
       <ClickToMove onTravel={onTravel} />
-      {stage >= 1 && <Earth />}
-      {stage >= 2 && <Ground />}
-      {stage >= 3 && <World near={near} inspecting={inspecting} visited={state.visited} />}
+      {/* one boundary each, so a stage still loading never hides one already shown */}
+      <Suspense>{stage >= 1 && <Earth />}</Suspense>
+      <Suspense>{stage >= 2 && <Ground />}</Suspense>
+      <Suspense>{stage >= 3 && <World near={near} inspecting={inspecting} visited={state.visited} />}</Suspense>
       {stage >= 4 && (
         <>
           <Lamps />
           <Screens />
-          <Rigs />
+          <Suspense>
+            <Rigs />
+          </Suspense>
         </>
       )}
       {stage >= 5 && (

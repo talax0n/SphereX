@@ -8,6 +8,15 @@ export interface Release {
 /** newest first */
 export const CHANGELOG: Release[] = [
   {
+    version: "1.11.1",
+    date: "2026-10-21",
+    title: "Lighter on load",
+    notes: [
+      "The planet, the stations and the people now come ready-made instead of being built in your browser.",
+      "The page freezes for less time while the planet appears.",
+    ],
+  },
+  {
     version: "1.11.0",
     date: "2026-10-11",
     title: "Straight to the point",

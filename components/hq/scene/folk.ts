@@ -74,23 +74,23 @@ const INK = "#1c1c1e";
 const BROW = "#3a2c26";
 const BLUSH = "#f3b9b1";
 
-const flatPlane = () => new PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-
 export const PARTS = {
   // the nose is part of the head so it takes the skin tint
-  head: merge([
+  head: () => merge([
     part(ell([14, 10]), [0, HEAD_Y, 0], { scale: [HEAD_R, HEAD_R * HEAD_SQUASH, HEAD_R] }),
     part(ell([6, 5]), onHead(0, 0.655)[0].toArray(), { scale: [0.04, 0.032, 0.03] }),
   ]),
   // buttons, so a shirt in a skin-like colour still reads as a shirt
-  body: merge([
+  body: () => merge([
     part(ell([12, 8]), [0, BODY_Y, 0], { scale: BODY }),
     ...[0.38, 0.33, 0.28].map((y) => part(ball(0.012, 6, 4), [0, y, onBody(0, y, 0.002)], { tone: "#c4c4c4" })),
   ]),
   /** feet, sleeves and hands: a unit nub scaled per instance */
-  nub: paint(ell([5, 4]), "#ffffff"),
-  blob: flatPlane(),
-} satisfies Record<string, BufferGeometry>;
+  nub: () => paint(ell([5, 4]), "#ffffff"),
+} satisfies Record<string, () => BufferGeometry>;
+
+/** the soft shadow under each character */
+export const BLOB = new PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
 
 /** A cap of the head sphere from the crown down to `cut` of a half turn, `r` out from its centre. */
 const dome = (r: number, cut: number, up = 0.02) =>
@@ -137,7 +137,7 @@ const strap = (x: number, front: number, back: number, w: number, tone?: string)
 };
 
 type Bone = "head" | "torso" | "hand";
-type Piece = { bone: Bone; geo: BufferGeometry };
+type Piece = { bone: Bone; build: () => BufferGeometry };
 
 export const FACES = ["smile", "grin", "oh", "joy"] as const;
 export const BOTTOMS = ["trousers", "skirt"] as const;
@@ -178,10 +178,10 @@ const held = (parts: Part[]) => merge(parts).scale(1.3, 1.3, 1.3).rotateZ(HANG);
  * parts with tones of their own (faces, crown gold, lenses, props) are tinted with `PLAIN`.
  */
 export const WEAR = {
-  smile: { bone: "head", geo: merge([...eyes(), ...brows(), ...blush(), stroke(0, 0.635, 0.05, 0.6, -Math.PI / 2, INK)]) },
+  smile: { bone: "head", build: () => merge([...eyes(), ...brows(), ...blush(), stroke(0, 0.635, 0.05, 0.6, -Math.PI / 2, INK)]) },
   grin: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       ...eyes(),
       ...brows(0.01),
       ...blush(),
@@ -191,12 +191,12 @@ export const WEAR = {
   },
   oh: {
     bone: "head",
-    geo: merge([...eyes(), ...brows(0.025), ...blush(), dot(0, 0.595, [0.026, 0.032, 0.012], "#6b2f35", 0.002)]),
+    build: () => merge([...eyes(), ...brows(0.025), ...blush(), dot(0, 0.595, [0.026, 0.032, 0.012], "#6b2f35", 0.002)]),
   },
   /** eyes shut in a happy squint */
   joy: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       ...[-1, 1].map((s) => stroke(s * EYE_X, EYE_Y - 0.012, 0.034, 0.75, Math.PI / 2, INK, 0.012)),
       ...brows(0.01),
       ...blush(),
@@ -207,11 +207,11 @@ export const WEAR = {
   trousers: {
     bone: "torso",
     // the seam down the middle splits them into two legs
-    geo: merge([shell(0.006, 0.55, 0.45), band(0.258, 0.01, 0.022, "#7c7c7c"), strap(0, 0.19 - Math.PI, -0.19, 0.012, "#a0a0a0")]),
+    build: () => merge([shell(0.006, 0.55, 0.45), band(0.258, 0.01, 0.022, "#7c7c7c"), strap(0, 0.19 - Math.PI, -0.19, 0.012, "#a0a0a0")]),
   },
   skirt: {
     bone: "torso",
-    geo: merge([
+    build: () => merge([
       part(new CylinderGeometry(0.2, 0.25, 0.14, 14, 1, true), [0, 0.2, 0], { scale: [1, 1, 0.92] }),
       band(0.265, 0.008, 0.024),
     ]),
@@ -219,7 +219,7 @@ export const WEAR = {
 
   overalls: {
     bone: "torso",
-    geo: merge([
+    build: () => merge([
       shell(0.012, 0.55, 0.45),
       // the bib, up the chest from the waist
       shell(0.012, 0.33, 0.24, 0.33, 0.34),
@@ -230,7 +230,7 @@ export const WEAR = {
   },
   hoodie: {
     bone: "torso",
-    geo: merge([
+    build: () => merge([
       shell(0.01, 0, 0.6),
       // the hood bunched behind the neck
       part(ell([10, 6]), [0, 0.42, -0.13], { scale: [0.19, 0.09, 0.11], rot: [-0.5, 0, 0] }),
@@ -241,13 +241,13 @@ export const WEAR = {
   /** open down the front, so the shirt shows */
   jacket: {
     bone: "torso",
-    geo: merge([shell(0.012, 0, 0.62, 0.64, 1.72)]),
+    build: () => merge([shell(0.012, 0, 0.62, 0.64, 1.72)]),
   },
-  stripes: { bone: "torso", geo: merge([0.31, 0.36, 0.41, 0.46].map((y) => band(y, 0.003, 0.026))) },
+  stripes: { bone: "torso", build: () => merge([0.31, 0.36, 0.41, 0.46].map((y) => band(y, 0.003, 0.026))) },
 
   beanie: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       dome(HEAD_R + 0.02, 0.36),
       part(ring(0.29, 0.045, 5, 14), [0, HEAD_Y + 0.17, 0], { rot: [Math.PI / 2, 0, 0] }),
       part(ball(0.075, 7, 5), [0, HEAD_Y + 0.33, 0]),
@@ -255,14 +255,14 @@ export const WEAR = {
   },
   cap: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       dome(HEAD_R + 0.015, 0.32),
       part(cyl(0.17, 0.17, 0.025), [0, HEAD_Y + 0.17, 0.27], { rot: [0.25, 0, 0], scale: [1, 1, 0.75] }),
     ]),
   },
   ears: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       part(pill(0.065, 0.2, 3, 8), [-0.12, HEAD_Y + 0.38, 0], { rot: [0, 0, 0.22] }),
       part(pill(0.065, 0.2, 3, 8), [0.12, HEAD_Y + 0.38, 0], { rot: [0, 0, -0.22] }),
       part(pill(0.032, 0.14, 2, 6), [-0.125, HEAD_Y + 0.38, 0.045], { rot: [0, 0, 0.22], tone: "#f3c4c4" }),
@@ -272,7 +272,7 @@ export const WEAR = {
   /** the site owner's */
   crown: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       part(cyl(0.235, 0.215, 0.11), [0, HEAD_Y + 0.24, 0], { tone: GOLD }),
       ...Array.from({ length: 5 }, (_, k) => {
         const a = (k / 5) * Math.PI * 2;
@@ -290,11 +290,11 @@ export const WEAR = {
   // brims stay above the eyes: from the camera's height a low one would hide them
   bucket: {
     bone: "head",
-    geo: merge([part(cyl(0.25, 0.31, 0.17), [0, HEAD_Y + 0.22, 0]), part(cyl(0.31, 0.39, 0.03), [0, HEAD_Y + 0.15, 0])]),
+    build: () => merge([part(cyl(0.25, 0.31, 0.17), [0, HEAD_Y + 0.22, 0]), part(cyl(0.31, 0.39, 0.03), [0, HEAD_Y + 0.15, 0])]),
   },
   tophat: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       part(cyl(0.2, 0.2, 0.32), [0, HEAD_Y + 0.36, 0]),
       part(cyl(0.205, 0.205, 0.06), [0, HEAD_Y + 0.25, 0], { tone: "#b5b5b5" }),
       part(cyl(0.33, 0.33, 0.03), [0, HEAD_Y + 0.2, 0]),
@@ -302,7 +302,7 @@ export const WEAR = {
   },
   hardhat: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       dome(HEAD_R + 0.025, 0.4),
       part(pill(0.035, 0.3, 3, 6), [0, HEAD_Y + 0.34, 0], { rot: [Math.PI / 2, 0, 0], tone: "#e8e8e8" }),
       part(cyl(0.2, 0.2, 0.025), [0, HEAD_Y + 0.16, 0.27], { rot: [0.25, 0, 0], scale: [1, 1, 0.8] }),
@@ -310,7 +310,7 @@ export const WEAR = {
   },
   headphones: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       part(new TorusGeometry(0.35, 0.022, 5, 14, Math.PI), [0, HEAD_Y, 0], { scale: [1, 0.93, 1] }),
       part(cyl(0.1, 0.1, 0.07), [-0.365, HEAD_Y, 0], { rot: [0, 0, Math.PI / 2] }),
       part(cyl(0.1, 0.1, 0.07), [0.365, HEAD_Y, 0], { rot: [0, 0, Math.PI / 2] }),
@@ -318,7 +318,7 @@ export const WEAR = {
   },
   newsboy: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       dome(HEAD_R + 0.02, 0.38),
       part(ball(0.3, 10, 6), [0, HEAD_Y + 0.2, -0.02], { scale: [1.05, 0.38, 1.05] }),
       part(cyl(0.15, 0.15, 0.025), [0, HEAD_Y + 0.16, 0.28], { rot: [0.3, 0, 0], scale: [1, 1, 0.7] }),
@@ -327,15 +327,15 @@ export const WEAR = {
   /** a folded newspaper boat */
   paper: {
     bone: "head",
-    geo: merge([dome(HEAD_R + 0.02, 0.34), part(gable(0.5, 0.17, 0.1), [0, HEAD_Y + 0.22, 0])]),
+    build: () => merge([dome(HEAD_R + 0.02, 0.34), part(gable(0.5, 0.17, 0.1), [0, HEAD_Y + 0.22, 0])]),
   },
 
   // low hair (bob, fringe, long, pigtails) peeks out under any hat; tall hair is only worn bare-headed
-  bob: { bone: "head", geo: merge([lock(0.88, 1.24, 0.72), lock(0, 2, 0.36)]) },
-  fringe: { bone: "head", geo: merge([...crop(), lock(0.12, 0.76, 0.38, HAIR_R + 0.004)]) },
+  bob: { bone: "head", build: () => merge([lock(0.88, 1.24, 0.72), lock(0, 2, 0.36)]) },
+  fringe: { bone: "head", build: () => merge([...crop(), lock(0.12, 0.76, 0.38, HAIR_R + 0.004)]) },
   spiky: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       ...crop(),
       ...[
         [0, 0, 0.22],
@@ -347,10 +347,10 @@ export const WEAR = {
       ].map(([x, z, h]) => part(cone(0.06, h), [x, HEAD_Y + 0.27 + h / 2 - 0.02, z], { rot: [z * 4, 0, -x * 5] })),
     ]),
   },
-  bun: { bone: "head", geo: merge([...crop(), part(ball(0.12, 10, 7), [0, HEAD_Y + 0.36, -0.06])]) },
+  bun: { bone: "head", build: () => merge([...crop(), part(ball(0.12, 10, 7), [0, HEAD_Y + 0.36, -0.06])]) },
   curly: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       ...crop(),
       puff(0, 0, 0.1),
       ...[0, 0.4, 0.8, 1.2, 1.6].map((p) => puff(0.2, p + 0.1, 0.09)),
@@ -360,7 +360,7 @@ export const WEAR = {
   },
   long: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       lock(0.88, 1.24, 0.72),
       lock(0, 2, 0.36),
       // down the back past the shoulders
@@ -369,7 +369,7 @@ export const WEAR = {
   },
   pigtails: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       ...crop(),
       ...[-1, 1].flatMap((s) => [
         part(ball(0.035, 6, 4), [s * 0.3, HEAD_Y + 0.02, -0.08], { tone: "#e0475b" }),
@@ -380,21 +380,21 @@ export const WEAR = {
 
   scarf: {
     bone: "torso",
-    geo: merge([
+    build: () => merge([
       part(ring(0.165, 0.042, 5, 12), [0, 0.425, 0], { rot: [Math.PI / 2, 0, 0], scale: [1, 0.92, 1] }),
       part(pill(0.035, 0.12, 2, 6), [0.08, 0.31, onBody(0.08, 0.31, 0.022)], { rot: [-0.1, 0, 0] }),
     ]),
   },
   tie: {
     bone: "torso",
-    geo: merge([
+    build: () => merge([
       part(ball(0.03, 6, 5), [0, 0.39, onBody(0, 0.39, 0.012)], { scale: [1, 1, 0.6] }),
       part(cone(0.042, 0.16), [0, 0.3, onBody(0, 0.3, 0.016)], { rot: [0, 0, Math.PI], scale: [1, 1, 0.3] }),
     ]),
   },
   bowtie: {
     bone: "torso",
-    geo: merge([
+    build: () => merge([
       part(cone(0.05, 0.1), [-0.06, 0.42, onBody(0.06, 0.42, 0.016)], { rot: [0, 0, -Math.PI / 2], scale: [1, 1, 0.45] }),
       part(cone(0.05, 0.1), [0.06, 0.42, onBody(0.06, 0.42, 0.016)], { rot: [0, 0, Math.PI / 2], scale: [1, 1, 0.45] }),
       part(ball(0.024, 6, 5), [0, 0.42, onBody(0, 0.42, 0.02)], { scale: [1, 1, 0.7] }),
@@ -402,7 +402,7 @@ export const WEAR = {
   },
   medal: {
     bone: "torso",
-    geo: merge([
+    build: () => merge([
       part(cyl(0.05, 0.05, 0.015), [0, 0.27, onBody(0, 0.27, 0.022)], { rot: [Math.PI / 2, 0, 0], tone: GOLD }),
       part(slab(0.04, 0.1, 0.01), [0, 0.35, onBody(0, 0.35, 0.016)], { rot: [-0.25, 0, 0], tone: "#e0475b" }),
     ]),
@@ -410,7 +410,7 @@ export const WEAR = {
 
   backpack: {
     bone: "torso",
-    geo: merge([
+    build: () => merge([
       part(ell([8, 6]), [0, 0.3, -0.22], { scale: [0.16, 0.17, 0.09] }),
       part(ell([8, 6]), [0, 0.22, -0.295], { scale: [0.1, 0.065, 0.045], tone: "#dedede" }),
       strap(-0.1, -0.3, 2.6, 0.035, "#d6d6d6"),
@@ -419,7 +419,7 @@ export const WEAR = {
   },
   satchel: {
     bone: "torso",
-    geo: merge([
+    build: () => merge([
       part(new TorusGeometry(0.215, 0.011, 4, 16).scale(1, 0.9, 1).rotateX(Math.PI / 2).rotateZ(-0.7), [0, 0.3, 0], { tone: "#d6d6d6" }),
       part(ell([8, 6]), [0.14, 0.16, 0.13], { scale: [0.085, 0.075, 0.035], rot: [0, 0.6, 0] }),
     ]),
@@ -427,7 +427,7 @@ export const WEAR = {
 
   glasses: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       ...[-1, 1].map((s) => fit(ring(0.068, 0.011, 4, 12), s * EYE_X, EYE_Y, 0.03)),
       fit(slab(0.05, 0.012, 0.012), 0, EYE_Y + 0.01, 0.034),
       ...temples(),
@@ -435,7 +435,7 @@ export const WEAR = {
   },
   shades: {
     bone: "head",
-    geo: merge([
+    build: () => merge([
       ...[-1, 1].map((s) => fit(ell([8, 5]).scale(0.08, 0.06, 0.012), s * EYE_X, EYE_Y, 0.03, "#2d3038")),
       fit(slab(0.05, 0.014, 0.012), 0, EYE_Y + 0.01, 0.034, "#2d3038"),
       ...temples("#2d3038"),
@@ -444,21 +444,21 @@ export const WEAR = {
 
   blueprint: {
     bone: "hand",
-    geo: held([
+    build: () => held([
       part(cyl(0.045, 0.045, 0.3), [0, 0, 0.03], { rot: [0, 0, 1.1], tone: "#6f9ee0" }),
       ...[-1, 1].map((s) => part(cyl(0.046, 0.046, 0.014), [-s * 0.134, s * 0.068, 0.03], { rot: [0, 0, 1.1], tone: "#fbfaf7" })),
     ]),
   },
   laptop: {
     bone: "hand",
-    geo: held([
+    build: () => held([
       part(slab(0.22, 0.16, 0.025), [0, -0.05, 0.03], { rot: [0, -0.5, 0], tone: "#c9ccd2" }),
       part(ball(0.018, 6, 4), [0.01, -0.05, 0.05], { scale: [1, 1, 0.3], tone: "#fbfaf7" }),
     ]),
   },
   briefcase: {
     bone: "hand",
-    geo: held([
+    build: () => held([
       part(slab(0.2, 0.14, 0.07), [0, -0.1, 0], { rot: [0, -0.5, 0], tone: "#8a5a3c" }),
       part(new TorusGeometry(0.03, 0.01, 3, 8, Math.PI), [0, -0.028, 0], { rot: [0, -0.5, 0], tone: "#5e3c28" }),
       part(slab(0.02, 0.02, 0.075), [0, -0.05, 0], { rot: [0, -0.5, 0], tone: GOLD }),
@@ -466,7 +466,7 @@ export const WEAR = {
   },
   wrench: {
     bone: "hand",
-    geo: held([
+    build: () => held([
       part(slab(0.032, 0.22, 0.02), [0, -0.06, 0.02], { tone: "#9aa3ad" }),
       // open jaw up, so it reads as a wrench and not a hook
       part(new TorusGeometry(0.045, 0.018, 3, 10, Math.PI * 1.4), [0, 0.09, 0.02], { rot: [0, 0, -Math.PI * 0.2], tone: "#9aa3ad" }),
@@ -475,7 +475,7 @@ export const WEAR = {
   },
   trophy: {
     bone: "hand",
-    geo: held([
+    build: () => held([
       part(cyl(0.012, 0.012, 0.09), [0, 0.02, 0.04], { tone: GOLD }),
       part(cyl(0.075, 0.03, 0.1), [0, 0.11, 0.04], { tone: GOLD }),
       ...[-1, 1].map((s) => part(new TorusGeometry(0.03, 0.009, 3, 8), [s * 0.075, 0.115, 0.04], { tone: GOLD })),
@@ -484,7 +484,7 @@ export const WEAR = {
   },
   mug: {
     bone: "hand",
-    geo: held([
+    build: () => held([
       part(cyl(0.06, 0.054, 0.12), [0, 0.01, 0.07], { tone: "#fbfaf7" }),
       part(cyl(0.052, 0.052, 0.005), [0, 0.068, 0.07], { tone: "#6b4a36" }),
       part(new TorusGeometry(0.032, 0.011, 3, 8), [0, 0.01, 0.012], { rot: [0, Math.PI / 2, 0], tone: "#fbfaf7" }),
@@ -492,7 +492,7 @@ export const WEAR = {
   },
   envelope: {
     bone: "hand",
-    geo: held([
+    build: () => held([
       part(slab(0.18, 0.12, 0.012), [0, -0.04, 0.03], { tone: "#f6ecd6" }),
       ...[-1, 1].map((s) => part(slab(0.105, 0.008, 0.004), [s * 0.043, -0.012, 0.037], { rot: [0, 0, s * 0.6], tone: "#d9c9a6" })),
       part(ball(0.017, 6, 4), [0, -0.04, 0.038], { scale: [1, 1, 0.3], tone: "#e0475b" }),
@@ -500,7 +500,7 @@ export const WEAR = {
   },
   newspaper: {
     bone: "hand",
-    geo: held([
+    build: () => held([
       part(slab(0.14, 0.2, 0.02), [0, -0.07, 0.03], { tone: "#ecebe6" }),
       part(slab(0.11, 0.03, 0.004), [0, 0.0, 0.041], { tone: "#3b4250" }),
       ...[0.04, 0.07, 0.1, 0.13].map((d) => part(slab(0.11, 0.008, 0.004), [0, -d, 0.041], { tone: "#a6a6a6" })),

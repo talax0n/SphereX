@@ -1,4 +1,4 @@
-import { Matrix4, Quaternion, Vector3, Vector4 } from "three";
+import { BufferGeometry, Float32BufferAttribute, IcosahedronGeometry, Matrix4, Quaternion, Vector3, Vector4 } from "three";
 import { STATIONS, type StationId } from "@/data/stations";
 import { PLINTH_HEIGHT, PLINTH_SIZE, SOLIDS, STAIRS, STAIR_W, STEPS, STEP_D, STEP_UP, type Rect, treadAt } from "./dioramas";
 
@@ -430,4 +430,21 @@ export function resolve(n: Vector3, radius: number, skip: Vector3 | null, player
     if (away.lengthSq() === 0) continue;
     walk(n, away, reach - d, ...riders);
   }
+}
+
+/** The water sphere cut down to the triangles over a sea, so dry land costs no water shading and the shader's discard only trims the shore. */
+export function seaSurface(): BufferGeometry {
+  const g = new IcosahedronGeometry(R + SEA_LEVEL, 36).deleteAttribute("uv");
+  const pos = g.getAttribute("position");
+  const v = new Vector3();
+  const keep: number[] = [];
+  for (let i = 0; i < pos.count; i += 3) {
+    let wet = false;
+    for (let k = 0; k < 3 && !wet; k++) wet = coast(v.fromBufferAttribute(pos, i + k).normalize()) > -0.6;
+    if (wet) for (let k = 0; k < 9; k++) keep.push(pos.array[i * 3 + k]);
+  }
+  const out = new BufferGeometry().setAttribute("position", new Float32BufferAttribute(keep, 3));
+  out.computeVertexNormals();
+  g.dispose();
+  return out;
 }
