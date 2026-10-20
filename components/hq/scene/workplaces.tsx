@@ -13,8 +13,9 @@ import {
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { Agent } from "@/data/pulse";
 import { ctl } from "../game";
-import { CLAY, merge } from "./clay";
-import { AMBIENCE, type Drive, IDENTITY, PLACES, PLINTH_HEIGHT, type Place, type Rig, SCREEN, type Spot, hash } from "./dioramas";
+import { CLAY } from "./clay";
+import { AMBIENCE, type Drive, PLACES, PLINTH_HEIGHT, type Place, type Rig, RIGS, SCREEN, type Spot, hash } from "./dioramas";
+import { useModel } from "./models";
 import { LANDMARKS } from "./planet";
 import { freeze } from "./world";
 import { occupant, town } from "./work";
@@ -154,7 +155,7 @@ interface Mount {
 }
 
 /** Every rig in the HQ as one batched mesh: one draw call, a matrix per copy per frame. */
-function mount(): { mesh: BatchedMesh; mounts: Mount[] } {
+function mount(baked: Record<string, BufferGeometry>): { mesh: BatchedMesh; mounts: Mount[] } {
   const step = new Matrix4();
   const list: Omit<Mount, "ids">[] = [];
   for (const [place, { station, spots }] of Object.entries(PLACES) as [Place, (typeof PLACES)[Place]][]) {
@@ -174,15 +175,16 @@ function mount(): { mesh: BatchedMesh; mounts: Mount[] } {
     const base = LANDMARKS[AMBIENCE.station].frame.clone().multiply(step.makeTranslation(rig.at[0], PLINTH_HEIGHT + rig.at[1], rig.at[2]));
     list.push({ rig, base, seat: null });
   }
-  const geos = list.map(({ rig }) => merge(rig.parts(IDENTITY[AMBIENCE.station])));
+  const geos = RIGS.map((_, j) => baked[`rig${j}`]);
   const copies = list.reduce((n, { rig }) => n + (rig.count ?? 1), 0);
   const verts = geos.reduce((n, g) => n + g.getAttribute("position").count, 0);
-  const mesh = new BatchedMesh(copies, verts, 0, CLAY);
+  const indices = geos.reduce((n, g) => n + (g.index?.count ?? 0), 0);
+  const mesh = new BatchedMesh(copies, verts, indices, CLAY);
   mesh.sortObjects = false;
   mesh.frustumCulled = false;
-  const mounts = list.map((m, j) => {
-    const geo = mesh.addGeometry(geos[j]);
-    geos[j].dispose();
+  const ids = geos.map((g) => mesh.addGeometry(g));
+  const mounts = list.map((m) => {
+    const geo = ids[RIGS.indexOf(m.rig)];
     return { ...m, ids: Array.from({ length: m.rig.count ?? 1 }, () => mesh.addInstance(geo)) };
   });
   return { mesh, mounts };
@@ -195,7 +197,8 @@ const tint = new Color();
 
 /** The HQ's moving furniture: driven by whoever is at it, plus the always-on ambience. */
 export function Rigs() {
-  const { mesh, mounts } = useMemo(() => (rigged ??= mount()), []);
+  const baked = useModel("rigs");
+  const { mesh, mounts } = useMemo(() => (rigged ??= mount(baked)), [baked]);
   const clock = useRef(0);
 
   useFrame((_, dt) => {

@@ -1,23 +1,10 @@
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
-import {
-  BufferGeometry,
-  Color,
-  DoubleSide,
-  Float32BufferAttribute,
-  IcosahedronGeometry,
-  Matrix4,
-  type Mesh,
-  MeshStandardMaterial,
-  ShaderMaterial,
-  Vector3,
-} from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import { Color, DoubleSide, IcosahedronGeometry, type Mesh, MeshStandardMaterial, ShaderMaterial, Vector3 } from "three";
 import { ctl } from "../game";
-import { ball, merge, part } from "./clay";
 import { OVERLAY } from "./minimap";
-import { COAST_GLSL, R, SEA_LEVEL, coast, frameAt, seaUniform, toward } from "./planet";
-import { rng, scatter } from "./props";
+import { useModel } from "./models";
+import { COAST_GLSL, R, SEA_LEVEL, seaUniform } from "./planet";
 import { newLook, skyNow } from "./sky";
 import { NOISE_GLSL, SURFACE_UNIFORMS } from "./surface";
 
@@ -63,23 +50,6 @@ ocean.onBeforeCompile = (shader) => {
       totalEmissiveRadiance += vec3(0.85, 0.95, 1.0) * smoothstep(0.8, 0.95, rip) * (1.0 - foam) * mix(0.35, 0.08, uNight);`,
     );
 };
-
-/** The water sphere cut down to the triangles over a sea, so dry land costs no water shading and the shader's discard only trims the shore. */
-function seaSurface(): BufferGeometry {
-  const g = new IcosahedronGeometry(R + SEA_LEVEL, 36).deleteAttribute("uv");
-  const pos = g.getAttribute("position");
-  const v = new Vector3();
-  const keep: number[] = [];
-  for (let i = 0; i < pos.count; i += 3) {
-    let wet = false;
-    for (let k = 0; k < 3 && !wet; k++) wet = coast(v.fromBufferAttribute(pos, i + k).normalize()) > -0.6;
-    if (wet) for (let k = 0; k < 9; k++) keep.push(pos.array[i * 3 + k]);
-  }
-  const out = new BufferGeometry().setAttribute("position", new Float32BufferAttribute(keep, 3));
-  out.computeVertexNormals();
-  g.dispose();
-  return out;
-}
 
 /** How far the air reaches above the ground; the glow fades to nothing there. */
 const SHELL = R + 2.6;
@@ -136,35 +106,6 @@ cloudMat.onBeforeCompile = (shader) => {
   );
 };
 
-const DEG = Math.PI / 180;
-
-/** A ring of puffy clouds in a band of polar angles, kept clear of the stations' latitudes as they drift about the pole. */
-function clouds(seed: number, count: number, polar: [number, number], size: number, lift: [number, number]): BufferGeometry {
-  const rand = rng(seed);
-  const m = new Matrix4();
-  const list = Array.from({ length: count }, () => {
-    const p = polar[0] + rand() * (polar[1] - polar[0]);
-    const az = rand() * Math.PI * 2;
-    const n = new Vector3(Math.sin(p * DEG) * Math.cos(az), Math.cos(p * DEG), Math.sin(p * DEG) * Math.sin(az));
-    const up = lift[0] + rand() * (lift[1] - lift[0]);
-    const s = size * (0.75 + rand() * 0.5);
-    const puffs = 3 + Math.floor(rand() * 4);
-    const parts = Array.from({ length: puffs }, (_, i) => {
-      const x = (i / (puffs - 1) - 0.5) * 1.6 * s;
-      const r = (1 - Math.abs(x / s) * 0.6) * (0.75 + rand() * 0.35) * s;
-      return part(ball(0.5, 10, 7), [x, r * 0.15, (rand() - 0.5) * 0.4 * s], { scale: [r, r * 0.62, r * 0.85] });
-    });
-    const g = merge(parts).applyMatrix4(frameAt(n, toward(n, scatter(rand, new Vector3()), new Vector3()), m, up));
-    const c = n.clone().multiplyScalar(R + up);
-    const at = new Float32Array(g.getAttribute("position").count * 3);
-    for (let i = 0; i < at.length; i += 3) c.toArray(at, i);
-    return g.setAttribute("centre", new Float32BufferAttribute(at, 3));
-  });
-  const out = mergeGeometries(list, false);
-  list.forEach((g) => g.dispose());
-  return out;
-}
-
 const DAY = new Color("#8fc3ff");
 const NIGHT = new Color("#3d55b0");
 const dusk = new Color();
@@ -172,10 +113,9 @@ const look = newLook();
 
 /** Oceans, the glow of the air at the planet's rim, and drifting clouds. */
 export function Earth() {
-  const sea = useMemo(() => seaSurface(), []);
+  const { sea } = useModel("sea");
   const shell = useMemo(() => new IcosahedronGeometry(SHELL, 12), []);
-  const high = useMemo(() => clouds(11, 7, [50, 58], 0.75, [2.2, 2.7]), []);
-  const low = useMemo(() => clouds(23, 14, [82, 150], 1.05, [1.8, 3.2]), []);
+  const { high, low } = useModel("clouds");
   const highRef = useRef<Mesh>(null);
   const lowRef = useRef<Mesh>(null);
 

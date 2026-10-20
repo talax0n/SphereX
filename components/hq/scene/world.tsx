@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Color, type InstancedMesh, Matrix4, MeshBasicMaterial, type Object3D } from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import { STATIONS, type StationId } from "@/data/stations";
 import { ctl } from "../game";
 import { ACCENT, CLAY, TONE, box, paint } from "./clay";
-import { PLINTH_HEIGHT, buildStation } from "./dioramas";
+import { PLINTH_HEIGHT } from "./dioramas";
+import { useModel } from "./models";
 import { LANDMARKS } from "./planet";
-import { blobTexture, buildDecals, buildGround, softSquare } from "./props";
+import { blobTexture, buildDecals, softSquare } from "./props";
 
 /** Static props never move again, so skip their per-frame matrix work. */
 export function freeze(o: Object3D | null) {
@@ -42,7 +42,7 @@ interface WorldProps {
 
 /** The terrain and its painted shadows, a stage apart from the stations so neither build freezes a phone for long. */
 export function Ground() {
-  const ground = useMemo(() => buildGround(), []);
+  const { ground } = useModel("ground");
   const decals = useMemo(() => buildDecals(), []);
   const squareMat = useMemo(
     () => new MeshBasicMaterial({ map: softSquare(), transparent: true, opacity: 0.45, depthWrite: false, color: "#3a3226" }),
@@ -61,11 +61,12 @@ export function Ground() {
   );
 }
 
+/** One station on its plinth, baked in place on the planet. */
+function Landmark({ id }: { id: StationId }) {
+  return <mesh ref={freeze} geometry={useModel(`station-${id}`)[id]} material={CLAY} userData={{ landmark: true }} />;
+}
+
 export function World({ near, inspecting, visited }: WorldProps) {
-  const landmarks = useMemo(
-    () => mergeGeometries(STATIONS.map((s) => buildStation(s.id).applyMatrix4(LANDMARKS[s.id].frame)), false),
-    [],
-  );
   const tiles = useRef<InstancedMesh>(null);
   const tileState = useRef<TileState[]>(STATIONS.map(() => ({ lit: 0, pop: POP })));
   const seen = useRef(new Set<StationId>());
@@ -117,7 +118,9 @@ export function World({ near, inspecting, visited }: WorldProps) {
 
   return (
     <>
-      <mesh ref={freeze} geometry={landmarks} material={CLAY} userData={{ landmark: true }} />
+      {STATIONS.map(({ id }) => (
+        <Landmark key={id} id={id} />
+      ))}
       <instancedMesh
         ref={tiles}
         args={[tileGeo, CLAY, STATIONS.length]}

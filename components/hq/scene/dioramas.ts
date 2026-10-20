@@ -447,6 +447,11 @@ export const AMBIENCE = {
   rigs: [leds, steam, bubbles, fanHead, blades, ...PLANTS.map(fronds)],
 } satisfies { station: StationId; rigs: Rig[] };
 
+/** Each distinct rig once, in a fixed order: the baked `rigs` model names its meshes by index here. */
+export const RIGS: Rig[] = [
+  ...new Set([...Object.values(PLACES).flatMap(({ spots }) => spots.flatMap((s: Spot) => s.rigs ?? [])), ...AMBIENCE.rigs]),
+];
+
 /** Cheap integer hash to [0, 1). */
 export function hash(n: number) {
   n = Math.imul(n ^ (n >>> 16), 0x45d9f3b);

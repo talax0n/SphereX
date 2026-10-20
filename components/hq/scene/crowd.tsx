@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import {
-  type BufferGeometry,
   Euler,
   type Group,
   type Material,
@@ -18,9 +17,9 @@ import { STATION_BY_ID, type StationId } from "@/data/stations";
 import { DROP_IN, HOVER, ctl, setGesture } from "../game";
 import { ACCENT, CLAY } from "./clay";
 import {
+  BLOB,
   HOP,
   KING,
-  PARTS,
   PLAYER,
   RADIUS,
   RIG,
@@ -43,6 +42,7 @@ import {
   worn,
 } from "./folk";
 import { IDLES, type Gesture, type Pose, blankPose, chasePose, mirrorPose, mixPose, onceOf, poseOf } from "./gesture";
+import { useModel } from "./models";
 import { LANDMARKS, R, SEA_LEVEL, arc, depthAt, flatten, frameAt, pathDown, plinthAt, standLift, steer, swimming, toward } from "./planet";
 import { blobTexture } from "./props";
 import { TIME_SCALE } from "./work";
@@ -371,12 +371,12 @@ const KINDS = Object.keys(WEAR) as Wear[];
 /** feet, sleeves and hands, in `limbs` order */
 const NUBS = 6;
 /** One instance per folk in every mesh (six for the nubs), the instance index being the folk index. */
-const LAYERS: [Layer, BufferGeometry, Material, number][] = [
-  ["head", PARTS.head, CLAY, N],
-  ["body", PARTS.body, CLAY, N],
-  ["nub", PARTS.nub, CLAY, N * NUBS],
-  ["blob", PARTS.blob, blobMat, N],
-  ...KINDS.map((k): [Layer, BufferGeometry, Material, number] => [k, WEAR[k].geo, CLAY, N]),
+const LAYERS: [Layer, Material, number][] = [
+  ["head", CLAY, N],
+  ["body", CLAY, N],
+  ["nub", CLAY, N * NUBS],
+  ["blob", blobMat, N],
+  ...KINDS.map((k): [Layer, Material, number] => [k, CLAY, N]),
 ];
 const meshes = Object.fromEntries(LAYERS.map(([k]) => [k, null])) as Record<Layer, InstancedMesh | null>;
 /** Stable ref callbacks, so React doesn't detach and reattach each mesh on every render. */
@@ -415,6 +415,7 @@ function dress(i: number, f: Folk) {
 }
 
 export function Crowd({ near, onOpen }: CrowdProps) {
+  const baked = useModel("folk");
   const halo = useRef<Mesh>(null);
   const puff = useRef<Mesh>(null);
   const bubble = useRef<Group>(null);
@@ -556,11 +557,11 @@ export function Crowd({ near, onOpen }: CrowdProps) {
 
   return (
     <>
-      {LAYERS.map(([k, geo, mat, count]) => (
+      {LAYERS.map(([k, mat, count]) => (
         <instancedMesh
           key={k}
           ref={bind[k]}
-          args={[geo, mat, count]}
+          args={[k === "blob" ? BLOB : baked[k], mat, count]}
           frustumCulled={false}
           renderOrder={k === "blob" ? 1 : 0}
         />
