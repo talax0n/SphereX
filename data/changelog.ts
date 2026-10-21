@@ -15,6 +15,7 @@ export const CHANGELOG: Release[] = [
       "The site now opens on a simple page with my work, stack and path.",
       "The planet moved to its own page behind the Open world button.",
       "Old station links still work and take you to the planet.",
+      "A little typewriter at the bottom types my email, and you can type on it too.",
     ],
   },
   {
