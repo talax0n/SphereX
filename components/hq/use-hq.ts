@@ -78,7 +78,7 @@ export function useHQ(start?: StationId) {
   // the address bar names the open book; replaceState keeps Next from remounting the page
   useEffect(() => {
     if (state.mode !== "inspecting" && state.mode !== "exploring") return;
-    const path = state.mode === "inspecting" ? `/${state.station}` : "/";
+    const path = state.mode === "inspecting" ? `/world/${state.station}` : "/world";
     if (location.pathname !== path) history.replaceState(null, "", path);
   }, [state]);
 

@@ -18,7 +18,7 @@ export default function Read() {
     // the planet locks the body's scroll, so this page scrolls itself
     <div className="h-dvh overflow-y-auto">
       <main className="mx-auto max-w-2xl px-5 py-10 text-hq-ink sm:py-16">
-        <Link href="/" className="text-[13px] font-semibold text-hq-accent hover:underline">
+        <Link href="/world" className="text-[13px] font-semibold text-hq-accent hover:underline">
           Walk the planet instead →
         </Link>
         <header className="mt-10">
