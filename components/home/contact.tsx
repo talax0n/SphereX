@@ -1,5 +1,6 @@
 import { Globe } from "lucide-react";
 import Link from "next/link";
+import { Typewriter } from "@/components/home/typewriter";
 import { PROFILE } from "@/data/profile";
 
 export function Contact() {
@@ -7,6 +8,9 @@ export function Contact() {
   return (
     <section id="contact" className="mx-auto max-w-7xl scroll-mt-16 px-5 pt-24 pb-8 sm:px-8 sm:pt-32">
       <h2 className="text-[11px] tracking-[0.14em] text-hq-mute uppercase">Contact</h2>
+      <div className="mx-auto mt-8 max-w-3xl">
+        <Typewriter />
+      </div>
       <a
         href={`mailto:${PROFILE.email}`}
         className="mt-6 block font-display text-[clamp(1.75rem,7vw,6.5rem)] leading-none font-extrabold tracking-tighter break-words text-hq-ink transition-colors hover:text-hq-accent"

@@ -1,0 +1,99 @@
+.tw {
+  --tw-ink: #2c2c30;
+  --tw-ink-top: #3c3c41;
+  --tw-ribbon: #3a3a3f;
+  --tw-paper: #ffffff;
+  --tw-felt: #c9c9c4;
+  border-radius: 10px;
+  cursor: text;
+  outline: none;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.iso[data-theme="dark"] .tw {
+  --tw-ink: #0c0c0c;
+  --tw-ink-top: #161616;
+  --tw-paper: #e8e8e4;
+  --tw-felt: #222;
+}
+
+.tw:focus-visible {
+  outline: 1px solid var(--anatomy-muted);
+  outline-offset: 6px;
+}
+
+.tw [data-key],
+.tw [data-lever] {
+  cursor: pointer;
+}
+
+.tw-paper {
+  fill: var(--tw-paper);
+}
+
+.tw-paper-band {
+  fill: var(--anatomy-shade-3);
+}
+
+.tw-rubber > .iso-fill,
+.tw-rubber > .iso-shade[data-shade="0"] {
+  fill: #1f1f22;
+}
+
+.tw-rubber > .iso-shade[data-shade="1"] {
+  fill: #2a2a2e;
+}
+
+.tw-rubber > .iso-shade[data-shade="2"] {
+  fill: #36363b;
+}
+
+.tw-rubber > .iso-shade[data-shade="3"],
+.tw-rubber > .iso-top {
+  fill: #434348;
+}
+
+.tw-rubber.iso-solid[data-seamless] > .iso-shade {
+  stroke: none;
+}
+
+.tw-type {
+  fill: var(--tw-ink);
+  font-family: "Courier New", Courier, ui-monospace, monospace;
+  font-weight: 700;
+}
+
+.tw-ribbon {
+  fill: var(--tw-ribbon);
+  stroke: var(--tw-ribbon);
+  stroke-width: 0.3;
+  stroke-linejoin: round;
+}
+
+.tw-ink > .iso-shade,
+.tw-ink > .iso-fill {
+  fill: var(--tw-ink);
+}
+
+.tw-ink > .iso-top {
+  fill: var(--tw-ink-top);
+}
+
+.tw-felt > .iso-top,
+.tw-felt > .iso-shade {
+  fill: var(--tw-felt);
+}
+
+@media (max-width: 640px) {
+  .tw {
+    overflow: hidden;
+  }
+
+  .iso-plate .tw .iso-svg {
+    width: 116%;
+    margin: -3% -8% -2%;
+  }
+}
