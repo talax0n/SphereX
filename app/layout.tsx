@@ -15,7 +15,7 @@ const syne = Syne({
 });
 
 const description =
-  "Theo Niomba, fullstack engineer in Indonesia. Walk a tiny clay planet and open each station's book to read my projects, experience, skills and awards.";
+  "Theo Niomba, fullstack engineer in Indonesia. A visual portfolio of my projects, stack and path, with a tiny walkable clay planet if you want to explore.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://theola.dev"),

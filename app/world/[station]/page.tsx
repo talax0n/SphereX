@@ -36,8 +36,8 @@ export async function generateMetadata({ params }: { params: Promise<{ station: 
   return {
     title,
     description,
-    alternates: { canonical: `/${s.id}` },
-    openGraph: { title, description, url: `/${s.id}`, siteName: "SphereX", type: "website" },
+    alternates: { canonical: `/world/${s.id}` },
+    openGraph: { title, description, url: `/world/${s.id}`, siteName: "SphereX", type: "website" },
     twitter: { card: "summary", title, description },
   };
 }
