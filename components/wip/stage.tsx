@@ -86,8 +86,8 @@ export function WipStage() {
     let toSign = 0;
     const measure = () => {
       half = stage.clientWidth / 2;
-      // where Pim stands so the hammer lands on the left of the board: its head swings about 100 units right of Pim's middle
-      toSign = sign.offsetLeft + sign.offsetWidth * 0.2 - (wrap.offsetLeft + wrap.offsetWidth / 2) - (100 * wrap.offsetWidth) / 200;
+      // Pim stops with its tail (about 78 units right of its middle) just short of the post; the hammer head reaches 22 units further, onto the board
+      toSign = sign.offsetLeft - 4 - (wrap.offsetLeft + wrap.offsetWidth / 2) - (78 * wrap.offsetWidth) / 200;
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -206,7 +206,7 @@ export function WipStage() {
           <div ref={signRef} className="absolute right-[4%] bottom-[44px] w-[104px] origin-bottom sm:right-[6%] sm:bottom-[56px] sm:w-[148px]">
             <Sign />
           </div>
-          <div ref={wrapRef} className="absolute bottom-[38px] left-1/2 -ml-[72px] w-[144px] sm:bottom-[48px] sm:-ml-[105px] sm:w-[210px]">
+          <div ref={wrapRef} className="absolute bottom-[38px] left-[40%] -ml-[72px] sm:left-1/2 w-[144px] sm:bottom-[48px] sm:-ml-[105px] sm:w-[210px]">
             <button
               type="button"
               onClick={() => pokeRef.current()}

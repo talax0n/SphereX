@@ -57,7 +57,7 @@ body {
 @keyframes pim-z {
   0% {
     opacity: 0;
-    transform: translate(0, 0) scale(0.6);
+    transform: translate(0, 0) scale(0.8);
   }
   25% {
     opacity: 1;

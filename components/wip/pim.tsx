@@ -407,10 +407,16 @@ export const Pim = memo(function Pim() {
         </g>
       </g>
 
-      <g {...v("fx", "zzz")} fill={INK} fontWeight="800" fontFamily="var(--font-syne), sans-serif">
-        <text x="148" y="72" fontSize="30" className="pim-z">z</text>
-        <text x="166" y="50" fontSize="24" className="pim-z" style={{ animationDelay: "0.8s" }}>z</text>
-        <text x="184" y="30" fontSize="18" className="pim-z" style={{ animationDelay: "1.6s" }}>z</text>
+      <g {...v("fx", "zzz")} fill="none" stroke={INK} strokeWidth={4.5} strokeLinecap="round" strokeLinejoin="round">
+        {[
+          [142, 62, 1],
+          [162, 36, 0.8],
+          [178, 14, 0.62],
+        ].map(([x, y, k], i) => (
+          <g key={i} transform={`translate(${x} ${y}) scale(${k})`}>
+            <path d="M-9 -10 H9 L-9 10 H9" className="pim-z" style={{ animationDelay: `${i * 0.8}s` }} />
+          </g>
+        ))}
       </g>
       <g {...v("fx", "confetti")}>
         {Array.from({ length: 18 }, (_, i) => (
