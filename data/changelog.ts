@@ -8,6 +8,19 @@ export interface Release {
 /** newest first */
 export const CHANGELOG: Release[] = [
   {
+    version: "2.0.0",
+    date: "2026-11-03",
+    title: "Under construction",
+    notes: [
+      "I'm rebuilding the whole site, so the planet is packed away for now.",
+      "Every link lands on one page while I work.",
+      "Bolt, my little builder bot, keeps you company there.",
+      "He hammers, dances, hauls planks, types and sometimes trips over nothing.",
+      "His head follows your cursor, and a tap or the Poke button makes him react.",
+      "If you prefer less motion, he stays calm and just idles.",
+    ],
+  },
+  {
     version: "1.11.1",
     date: "2026-10-21",
     title: "Lighter on load",

@@ -14,18 +14,16 @@ const syne = Syne({
   weight: ["700", "800"],
 });
 
-const description =
-  "Theo Niomba, fullstack engineer in Indonesia. Walk a tiny clay planet and open each station's book to read my projects, experience, skills and awards.";
+const title = "Theo · Under construction";
+const description = "I'm rebuilding theola.dev from scratch. My little builder bot is on the job until the new site is ready.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://theola.dev"),
-  title: "Theo Niomba · Fullstack Engineer",
+  title,
   description,
-  openGraph: { title: "Theo Niomba · Fullstack Engineer", description, url: "/", siteName: "SphereX", type: "website" },
-  twitter: { card: "summary", title: "Theo Niomba · Fullstack Engineer", description },
+  openGraph: { title, description, url: "/", siteName: "SphereX", type: "website" },
+  twitter: { card: "summary", title, description },
 };
-
-const INTRO_SEEN = `try{localStorage.getItem("hq:intro")==="1"&&(document.documentElement.dataset.introSeen="")}catch(e){}`;
 
 export const viewport = {
   width: "device-width",
@@ -39,11 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    // the script flags returning visitors before first paint, so the server-rendered intro never flashes for them
-    <html lang="en" className={`${inter.variable} ${syne.variable}`} suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: INTRO_SEEN }} />
-      </head>
+    <html lang="en" className={`${inter.variable} ${syne.variable}`}>
       <body>{children}</body>
     </html>
   );
