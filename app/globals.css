@@ -10,6 +10,10 @@
   --color-hq-mute: #6b6b6b;
   --color-hq-line: #e5e5e5;
   --color-hq-accent: #2b3cff;
+  --color-wip-bg: #f6f0e5;
+  --color-wip-card: #fdf8ef;
+  --color-wip-ink: #2b2233;
+  --color-wip-mute: #6e6470;
 }
 
 html,
@@ -49,18 +53,61 @@ body {
   }
 }
 
-@keyframes wip-drift {
+/* Pim's effects: snoozing z's and falling confetti */
+@keyframes pim-z {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(14px, -38px) scale(1.15);
+  }
+}
+
+.pim-z {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pim-z 2.4s ease-out infinite;
+}
+
+@keyframes pim-confetti {
+  0% {
+    opacity: 0;
+    transform: translate(0, -30px) rotate(0deg);
+  }
+  10% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), 190px) rotate(var(--spin));
+  }
+}
+
+.pim-confetti {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pim-confetti var(--d) ease-in var(--delay) infinite;
+}
+
+@keyframes pim-drift {
   from {
-    transform: translateX(-30vw);
+    transform: translateX(-160px);
   }
   to {
-    transform: translateX(130vw);
+    transform: translateX(110vw);
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .wip-cloud {
-    animation: wip-drift var(--d) linear infinite;
-    animation-delay: var(--delay);
+  .pim-cloud {
+    animation: pim-drift var(--d) linear var(--delay) infinite;
   }
 }

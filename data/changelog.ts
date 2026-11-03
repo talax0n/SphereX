@@ -14,12 +14,12 @@ export const CHANGELOG: Release[] = [
     notes: [
       "I'm rebuilding the whole site, so the planet is packed away for now.",
       "Every link lands on one page while I work.",
-      "Nao, a young carpenter drawn like a hand-painted cartoon, keeps you company there.",
-      "Nao hammers up a sign, dances, hauls planks, sketches and sometimes trips over nothing.",
-      "A little moss sprite hangs around and reacts to everything Nao does.",
-      "Nao's hair and ponytail sway with every move, and the sky, clouds and petals drift by.",
-      "Nao looks toward your cursor, and a tap or the Say hi button gets a reaction.",
-      "If you prefer less motion, Nao stays calm and just idles.",
+      "Pim, a chubby little cat in a yellow hard hat, keeps you company there.",
+      "Pim is drawn as a flat cartoon that stays crisp at any size.",
+      "Pim waves, jumps, naps, trips, hammers the sign and runs off the edge and back.",
+      "Pim's eyes follow your cursor, and a tap on Pim gets a reaction.",
+      "You can pick what Pim does from the row of buttons under the stage.",
+      "If you prefer less motion, Pim stays put and just idles.",
     ],
   },
   {

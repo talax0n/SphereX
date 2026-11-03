@@ -9,7 +9,6 @@
     "lint": "eslint",
     "pulse": "node --env-file-if-exists=.env.local scripts/pulse.ts",
     "models": "node scripts/models.bake.ts",
-    "wip": "/Applications/Blender.app/Contents/MacOS/Blender -b --factory-startup --python scripts/wip.blend.py --",
     "realtime:dev": "wrangler dev --config realtime/wrangler.toml",
     "realtime:deploy": "wrangler deploy --config realtime/wrangler.toml"
   },

@@ -15,7 +15,7 @@ const syne = Syne({
 });
 
 const title = "Theo · Under construction";
-const description = "I'm rebuilding theola.dev from scratch. My little builder bot is on the job until the new site is ready.";
+const description = "I'm rebuilding theola.dev from scratch. Pim, my little builder, is on the job until the new site is ready.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://theola.dev"),
