@@ -48,3 +48,19 @@ body {
     animation: twinkle var(--d) ease-in-out infinite;
   }
 }
+
+@keyframes wip-drift {
+  from {
+    transform: translateX(-30vw);
+  }
+  to {
+    transform: translateX(130vw);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wip-cloud {
+    animation: wip-drift var(--d) linear infinite;
+    animation-delay: var(--delay);
+  }
+}

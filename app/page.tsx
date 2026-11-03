@@ -14,7 +14,7 @@ export default function Home() {
             Something new is being built.
           </h1>
           <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-hq-mute">
-            I&apos;m tearing down the old planet and rebuilding this site from scratch. Bolt is on the job. Come back soon.
+            I&apos;m tearing down the old planet and rebuilding this site from scratch. Nao, my young carpenter, is on the job. Come back soon.
           </p>
         </header>
         <nav aria-label="Elsewhere" className="flex flex-wrap gap-x-5 gap-y-2 pb-24 text-[13px] font-semibold sm:pb-0 [&_a]:pointer-events-auto">

@@ -14,10 +14,12 @@ export const CHANGELOG: Release[] = [
     notes: [
       "I'm rebuilding the whole site, so the planet is packed away for now.",
       "Every link lands on one page while I work.",
-      "Bolt, my little builder bot, keeps you company there.",
-      "He hammers, dances, hauls planks, types and sometimes trips over nothing.",
-      "His head follows your cursor, and a tap or the Poke button makes him react.",
-      "If you prefer less motion, he stays calm and just idles.",
+      "Nao, a young carpenter drawn like a hand-painted cartoon, keeps you company there.",
+      "Nao hammers up a sign, dances, hauls planks, sketches and sometimes trips over nothing.",
+      "A little moss sprite hangs around and reacts to everything Nao does.",
+      "Nao's hair and ponytail sway with every move, and the sky, clouds and petals drift by.",
+      "Nao looks toward your cursor, and a tap or the Say hi button gets a reaction.",
+      "If you prefer less motion, Nao stays calm and just idles.",
     ],
   },
   {
