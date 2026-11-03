@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // vendored Draco decoder, copied from three by npm run models
+    "public/draco/**",
   ]),
 ]);
 
