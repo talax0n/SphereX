@@ -1,6 +1,7 @@
 export type Link = { label: string; href: string };
+export type Skill = { name: string; icon: string };
 export type Role = { org: string; title: string; dates: string; place: string; points: string[] };
-export type Project = { name: string; stack: string[]; points: string[]; href?: string };
+export type Project = { name: string; stack: string[]; points: string[]; href?: string; image?: string };
 export type Award = { emoji: string; place: string; project?: string; event: string; by?: string; date: string };
 
 export const CV: {
@@ -12,7 +13,7 @@ export const CV: {
   experience: Role[];
   projects: Project[];
   awards: Award[];
-  skills: [category: string, items: string[]][];
+  skills: [category: string, items: Skill[]][];
 } = {
   name: "Theola Aristo Putra Niomba",
   tagline: "Fullstack & smart contract engineer building production DeFi on Solana.",
@@ -76,17 +77,21 @@ export const CV: {
   projects: [
     {
       name: "Hedgin",
+      href: "https://hedgin.xyz/",
+      image: "/projects/hedgin.png",
       stack: ["Rust", "Anchor", "Next.js", "PostgreSQL", "Telegram Bot"],
       points: ["On-chain vaults with share accounting, 4h NAV epochs, admin dashboard, and manager Telegram bot"],
     },
     {
       name: "SolHedge",
+      image: "/projects/solhedge.png",
       stack: ["TypeScript", "Node.js", "PostgreSQL", "Kubernetes", "Solana"],
       href: "https://solhedge.xyz/",
       points: ["Delta-hedged LP automation: market watcher, hedge strategy, and execution services over a Postgres job queue"],
     },
     {
       name: "Octora",
+      image: "/projects/octora.png",
       stack: ["TypeScript", "React", "Fastify", "Prisma", "Circom"],
       href: "https://www.octora.xyz/",
       points: [
@@ -95,6 +100,7 @@ export const CV: {
     },
     {
       name: "XFlare",
+      image: "/projects/xflare.png",
       stack: ["Next.js", "NestJS", "Turborepo", "Zustand", "Docker"],
       href: "https://xflare.app/",
       points: ["Crypto trading platform with portfolio dashboard, referral tree, and points system"],
@@ -108,9 +114,45 @@ export const CV: {
     { emoji: "⭐", place: "Mentor's Favorite", event: "Kelas Rutin", by: "Blockdev.id", date: "Nov 2025" },
   ],
   skills: [
-    ["Languages", ["TypeScript", "JavaScript", "Python", "Go", "Rust", "Solidity", "C#", "Kotlin"]],
-    ["Frameworks", ["React", "Next.js", "Tailwind", "Vue.js", "Svelte", "Gin", "Flask", "Laravel", "GraphQL"]],
-    ["Data & DevOps", ["PostgreSQL", "MySQL", "Redis", "Firebase", "Docker", "Kubernetes", "Git", "Linux"]],
-    ["Web3", ["Solana", "Anchor", "Meteora", "Jupiter", "Phoenix", "Foundry", "OpenZeppelin"]],
+    ["Languages", [
+      { name: "TypeScript", icon: "/skills/typescript.svg" },
+      { name: "JavaScript", icon: "/skills/javascript.svg" },
+      { name: "Python", icon: "/skills/python.svg" },
+      { name: "Go", icon: "/skills/go.svg" },
+      { name: "Rust", icon: "/skills/rust.svg" },
+      { name: "Solidity", icon: "/skills/solidity.svg" },
+      { name: "C#", icon: "/skills/csharp.svg" },
+      { name: "Kotlin", icon: "/skills/kotlin.svg" },
+    ]],
+    ["Frameworks", [
+      { name: "React", icon: "/skills/react.svg" },
+      { name: "Next.js", icon: "/skills/nextjs.svg" },
+      { name: "Tailwind", icon: "/skills/tailwind.svg" },
+      { name: "Vue.js", icon: "/skills/vue.svg" },
+      { name: "Svelte", icon: "/skills/svelte.svg" },
+      { name: "Gin", icon: "/skills/gin.svg" },
+      { name: "Flask", icon: "/skills/flask.svg" },
+      { name: "Laravel", icon: "/skills/laravel.svg" },
+      { name: "GraphQL", icon: "/skills/graphql.svg" },
+    ]],
+    ["Data & DevOps", [
+      { name: "PostgreSQL", icon: "/skills/postgresql.svg" },
+      { name: "MySQL", icon: "/skills/mysql.svg" },
+      { name: "Redis", icon: "/skills/redis.svg" },
+      { name: "Firebase", icon: "/skills/firebase.svg" },
+      { name: "Docker", icon: "/skills/docker.svg" },
+      { name: "Kubernetes", icon: "/skills/kubernetes.svg" },
+      { name: "Git", icon: "/skills/git.svg" },
+      { name: "Linux", icon: "/skills/linux.svg" },
+    ]],
+    ["Web3", [
+      { name: "Solana", icon: "/skills/solana.svg" },
+      { name: "Anchor", icon: "/skills/anchor.png" },
+      { name: "Meteora", icon: "/skills/meteora.svg" },
+      { name: "Jupiter", icon: "/skills/jupiter.svg" },
+      { name: "Phoenix", icon: "/skills/phoenix.png" },
+      { name: "Foundry", icon: "/skills/foundry.png" },
+      { name: "OpenZeppelin", icon: "/skills/openzeppelin.svg" },
+    ]],
   ],
 };

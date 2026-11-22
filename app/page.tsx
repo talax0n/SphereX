@@ -1,6 +1,9 @@
+import Image from "next/image";
 import type { ReactNode } from "react";
 import { CV, type Role } from "@/data/cv";
 import { CHANGELOG } from "@/data/changelog";
+import { AiPulse } from "./ai-pulse";
+import { Section } from "./section";
 import { getGitHub, timeAgo, type Day, type GitHub } from "@/data/github";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -14,18 +17,6 @@ const linkCls = "text-link underline-offset-4 hover:underline";
 // Points mark bold with **text**; odd segments after splitting are bold.
 function Rich({ text, cls = "font-bold" }: { text: string; cls?: string }) {
   return text.split("**").map((part, i) => (i % 2 ? <strong key={i} className={cls}>{part}</strong> : part));
-}
-
-function Section({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
-  return (
-    <section id={id} className="mt-14 scroll-mt-6">
-      <h2 className="mb-5 text-base font-bold">
-        <span className="text-accent">## </span>
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
 }
 
 function Points({ items }: { items: string[] }) {
@@ -173,6 +164,7 @@ export default async function Home() {
         <nav aria-label="Sections" className="mt-2 flex flex-wrap gap-x-2 text-xs text-mute">
           Explore:
           {[
+            ["ai", "ai"],
             ["experience", "experience"],
             ["projects", "projects"],
             ["achievements", "achievements"],
@@ -186,14 +178,21 @@ export default async function Home() {
         </nav>
       </header>
 
+      <AiPulse />
+
       <Section id="experience" title="Experience">
         <Roles roles={CV.experience} />
       </Section>
 
       <Section id="projects" title="Projects">
-        <div className="space-y-7">
+        <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2">
           {CV.projects.map((p) => (
             <article key={p.name}>
+              {p.image && (
+                <a href={p.href} className="mb-3 block overflow-hidden rounded-md border border-line transition-opacity hover:opacity-90">
+                  <Image src={p.image} alt={`${p.name} homepage`} width={1280} height={800} sizes="(min-width: 640px) 360px, 100vw" className="h-auto w-full" />
+                </a>
+              )}
               <h3 className="font-bold">
                 {p.href ? <a href={p.href} className={linkCls}>{p.name} ↗</a> : p.name}
               </h3>
@@ -232,11 +231,20 @@ export default async function Home() {
       </Section>
 
       <Section title="Skills">
-        <dl className="space-y-2">
+        <dl className="space-y-4">
           {CV.skills.map(([cat, items]) => (
-            <div key={cat} className="sm:flex sm:gap-4">
-              <dt className="font-bold sm:w-36 sm:shrink-0">{cat}</dt>
-              <dd className="text-mute">{items.join(", ")}</dd>
+            <div key={cat} className="sm:flex sm:items-center sm:gap-4">
+              <dt className="mb-2 font-bold sm:mb-0 sm:w-36 sm:shrink-0">{cat}</dt>
+              <dd>
+                <ul className="flex flex-wrap gap-2">
+                  {items.map((s) => (
+                    // White tile in both themes, so dark logos (Next.js, Rust, Flask) stay visible in dark mode.
+                    <li key={s.name} title={s.name} className="grid size-10 place-items-center rounded-md border border-line bg-white">
+                      <Image src={s.icon} alt={s.name} width={24} height={24} className="size-6 object-contain" />
+                    </li>
+                  ))}
+                </ul>
+              </dd>
             </div>
           ))}
         </dl>
