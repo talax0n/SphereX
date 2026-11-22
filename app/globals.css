@@ -8,6 +8,9 @@
   --accent: #e58c2e;
   --link: #0d7390;
   --green: #3c6a12;
+  --badge: #3b2c22;
+  --badge-ink: #fff7e1;
+  --badge-live: #a8e063;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -19,6 +22,9 @@
     --accent: #e58c2e;
     --link: #41cfff;
     --green: #a8e063;
+    --badge: #f3e9d2;
+    --badge-ink: #1c1612;
+    --badge-live: #3c6a12;
   }
 }
 
@@ -31,6 +37,9 @@
   --color-accent: var(--accent);
   --color-link: var(--link);
   --color-green: var(--green);
+  --color-badge: var(--badge);
+  --color-badge-ink: var(--badge-ink);
+  --color-badge-live: var(--badge-live);
 }
 
 html {

@@ -164,7 +164,6 @@ export default async function Home() {
         <nav aria-label="Sections" className="mt-2 flex flex-wrap gap-x-2 text-xs text-mute">
           Explore:
           {[
-            ["ai", "ai"],
             ["experience", "experience"],
             ["projects", "projects"],
             ["achievements", "achievements"],
@@ -178,7 +177,6 @@ export default async function Home() {
         </nav>
       </header>
 
-      <AiPulse />
 
       <Section id="experience" title="Experience">
         <Roles roles={CV.experience} />
@@ -253,6 +251,7 @@ export default async function Home() {
       <footer className="mt-16 border-t border-line pt-4 text-xs text-mute">
         v{version} · updated {date}
       </footer>
+      <AiPulse />
     </main>
   );
 }

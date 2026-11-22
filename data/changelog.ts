@@ -14,7 +14,7 @@ export const CHANGELOG: Release[] = [
     notes: [
       "Each project shows a screenshot of what it looks like.",
       "My skills show as logos instead of a list of words.",
-      "You can see what my AI agents are working on right now.",
+      "A small badge in the corner shows what my AI agents are working on right now.",
     ],
   },
   {
