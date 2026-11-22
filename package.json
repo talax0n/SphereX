@@ -6,27 +6,14 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "pulse": "node --env-file-if-exists=.env.local scripts/pulse.ts",
-    "models": "node scripts/models.bake.ts",
-    "realtime:dev": "wrangler dev --config realtime/wrangler.toml",
-    "realtime:deploy": "wrangler deploy --config realtime/wrangler.toml"
+    "lint": "eslint"
   },
   "dependencies": {
-    "@react-three/drei": "^10.7.9",
-    "@react-three/fiber": "^9.6.0",
-    "@types/three": "^0.184.0",
-    "clsx": "^2.1.1",
-    "framer-motion": "^12.38.0",
-    "lucide-react": "^1.8.0",
     "next": "16.2.4",
     "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "tailwind-merge": "^3.5.0",
-    "three": "^0.184.0"
+    "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261009.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -34,7 +21,6 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.4",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "wrangler": "^4.149.0"
+    "typescript": "^5"
   }
 }

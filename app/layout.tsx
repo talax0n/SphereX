@@ -1,43 +1,30 @@
 import type { Metadata } from "next";
-import { Inter, Syne } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
+import { CV } from "@/data/cv";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const mono = JetBrains_Mono({
+  variable: "--font-jb",
   subsets: ["latin"],
-  weight: ["300", "400", "600"],
+  weight: ["400", "700"],
 });
-
-const syne = Syne({
-  variable: "--font-syne",
-  subsets: ["latin"],
-  weight: ["700", "800"],
-});
-
-const title = "Theo · Under construction";
-const description = "I'm rebuilding theola.dev from scratch. Pim, my little builder, is on the job until the new site is ready.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://theola.dev"),
-  title,
-  description,
-  openGraph: { title, description, url: "/", siteName: "SphereX", type: "website" },
-  twitter: { card: "summary", title, description },
+  title: CV.name,
+  description: CV.summary,
+  openGraph: { title: CV.name, description: CV.summary, url: "/", siteName: CV.name, type: "website" },
+  twitter: { card: "summary", title: CV.name, description: CV.summary },
 };
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  viewportFit: "cover" as const,
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${syne.variable}`}>
+    <html lang="en" className={mono.variable}>
       <body>{children}</body>
     </html>
   );

@@ -1,20 +1,17 @@
 import assert from "node:assert/strict";
-import { streaks } from "../data/github.ts";
+import { longestStreak, parseContributions } from "../data/github.ts";
 
-const cal = (counts: number[]) => counts.map((count, i) => ({ date: `2026-01-${String(i + 1).padStart(2, "0")}`, count }));
+const html = `
+<td style="width: 28px">
+<td tabindex="-1" data-ix="0" aria-selected="false" aria-describedby="contribution-day-component-0-0" data-date="2026-11-22" id="contribution-day-component-0-0" data-level="0" role="gridcell" class="ContributionCalendar-day"></td>
+<td id="contribution-day-component-1-0" data-level="2" data-date="2026-11-23" class="ContributionCalendar-day"></td>
+<tool-tip id="tooltip-a" for="contribution-day-component-1-0" popover="manual">3 contributions on November 23rd.</tool-tip>
+<tool-tip id="tooltip-b" for="contribution-day-component-0-0" popover="manual">No contributions on November 22nd.</tool-tip>`;
 
-assert.deepEqual(streaks(cal([1, 1, 0, 1, 1, 1]), "2026-01-06"), {
-  current: { days: 3, start: "2026-01-04", end: "2026-01-06" },
-  longest: { days: 3, start: "2026-01-04", end: "2026-01-06" },
-});
-assert.deepEqual(
-  streaks(cal([1, 1, 0, 1, 1, 0]), "2026-01-06").current,
-  { days: 2, start: "2026-01-04", end: "2026-01-05" },
-  "a quiet today keeps yesterday's streak alive",
-);
-assert.equal(streaks(cal([1, 1, 0, 1, 0, 0]), "2026-01-06").current, null, "a quiet yesterday ends it");
-assert.deepEqual(streaks(cal([1, 1, 1, 0, 1, 0]), "2026-01-06").longest, { days: 3, start: "2026-01-01", end: "2026-01-03" });
-assert.deepEqual(streaks(cal([0, 0, 0]), "2026-01-03"), { current: null, longest: null });
-assert.equal(streaks(cal([1, 1, 1]), "2026-01-01").current?.days, 1, "future days are ignored");
-
-console.log("github ok");
+assert.deepEqual(parseContributions(html), [
+  { date: "2026-11-22", count: 0, level: 0 },
+  { date: "2026-11-23", count: 3, level: 2 },
+]);
+assert.equal(longestStreak([0, 1, 2, 0, 5, 1, 1, 0].map((count) => ({ count }))), 3);
+assert.equal(longestStreak([]), 0);
+console.log("ok");

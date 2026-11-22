@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 # Changelog
 
-Every change a visitor can notice ships with an entry in `data/changelog.ts`, in the same commit. The entries show on the Updates board on the planet.
+Every change a visitor can notice ships with an entry in `data/changelog.ts`, in the same commit. The latest version shows in the page footer.
 
 - Add the entry at the top of `CHANGELOG`. The list is newest first.
 - Bump the version with semver against the current top entry:
