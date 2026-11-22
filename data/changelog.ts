@@ -14,6 +14,7 @@ export const CHANGELOG: Release[] = [
     notes: [
       "The AI badge now shows agents from all my machines, not just one.",
       "It catches up within a few seconds instead of half a minute.",
+      "Background helper runs no longer show up as extra agents.",
       "My role at KRUUU now says I built internal tools.",
     ],
   },

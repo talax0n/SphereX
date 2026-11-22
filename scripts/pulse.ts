@@ -5,7 +5,7 @@
  */
 import { closeSync, openSync, readFileSync, readSync, readdirSync, statSync } from "node:fs";
 import { createServer } from "node:http";
-import { homedir, hostname } from "node:os";
+import { homedir, hostname, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -43,6 +43,34 @@ interface Session {
 }
 
 const sessions = new Map<string, Session>();
+
+const TEMP_ROOTS = [...new Set([tmpdir(), "/tmp", "/private/tmp", "/var/folders", "/private/var/folders"])];
+const inTemp = (cwd: string) => TEMP_ROOTS.some((r) => cwd === r || cwd.startsWith(`${r}/`));
+const scratchCache = new Map<string, boolean>();
+/**
+ * Tools spawn short-lived helper sessions from a temp folder (T3 Code does, for one); they aren't agents
+ * anyone is working with. Claude names the project folder after the cwd, Codex puts it on its first line.
+ */
+function scratch(path: string, provider: Provider): boolean {
+  const known = scratchCache.get(path);
+  if (known !== undefined) return known;
+  let cwd: string | null = null;
+  if (provider === "claude") cwd = basename(join(path, "..")).replace(/-/g, "/");
+  else
+    try {
+      const fd = openSync(path, "r");
+      const buf = Buffer.alloc(8192);
+      const n = readSync(fd, buf, 0, buf.length, 0);
+      closeSync(fd);
+      // the first line carries the whole system prompt, so match cwd near its start instead of parsing it
+      const m = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(buf.toString("utf8", 0, n));
+      if (!m) return false;
+      cwd = JSON.parse(`"${m[1]}"`);
+    } catch {}
+  const verdict = cwd !== null && inTemp(cwd);
+  scratchCache.set(path, verdict);
+  return verdict;
+}
 const countedToday = new Set<string>();
 let day = new Date().toDateString();
 let first = true;
@@ -207,6 +235,7 @@ function scan(): Pulse {
   const live = new Map<string, Session>();
   const running = busyClaude();
   for (const [path, provider, owner] of files()) {
+    if (scratch(owner, provider)) continue;
     let st;
     try {
       st = statSync(path);
@@ -248,7 +277,16 @@ function scan(): Pulse {
   first = false;
   const lastSeen = Math.round(Math.max(0, ...[...sessions.values()].map((s) => s.mtime)));
   // past the cap, drop the quietest sessions so the same ones stay on screen between scans
-  const agents = busy.sort(([a], [b]) => b - a).slice(0, MAX_AGENTS).map(([, a]) => a);
+  // T3 Code starts a fresh rollout for the same Codex thread, so one thread can own two live transcripts
+  const seen = new Set<string>();
+  const agents = busy
+    .sort(([a], [b]) => b - a)
+    .map(([, a]) => a)
+    .filter((a) => {
+      const key = a.title === null ? a.id : `${a.provider}:${a.title}`;
+      return !seen.has(key) && seen.add(key);
+    })
+    .slice(0, MAX_AGENTS);
   return { agents, lastSeen, runsToday: countedToday.size };
 }
 
