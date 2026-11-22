@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { type Provider, type Pulse, ago, say } from "@/data/pulse";
 
-const POLL_MS = 15_000;
+const POLL_MS = 5_000;
 
 // Paths from Simple Icons. Codex uses OpenAI's mark in currentColor so it reads on the badge in both themes.
 const PROVIDER: Record<Provider, { label: string; d: string; color: string }> = {

@@ -5,7 +5,7 @@
  */
 import { closeSync, openSync, readFileSync, readSync, readdirSync, statSync } from "node:fs";
 import { createServer } from "node:http";
-import { homedir } from "node:os";
+import { homedir, hostname } from "node:os";
 import { basename, join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -20,11 +20,13 @@ if (!ENDPOINT || !SECRET) {
 
 const LIVE_MS = 90_000;
 const SCAN_MS = 2_000;
-const DEBOUNCE_MS = 5_000;
+const DEBOUNCE_MS = 2_000;
 const HEARTBEAT_MS = 60_000;
 
 /** 8 hex of the transcript path: stable per session, and says nothing about the path */
 const idOf = (path: string) => createHash("sha256").update(path).digest("hex").slice(0, 8);
+/** one key per machine on the server, so several watchers can report at once; a hash, so the hostname never leaves */
+const SOURCE = idOf(hostname());
 
 interface Session {
   provider: Provider;
@@ -263,7 +265,7 @@ async function tick() {
   try {
     const res = await fetch(ENDPOINT!, {
       method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${SECRET}` },
+      headers: { "content-type": "application/json", authorization: `Bearer ${SECRET}`, "x-pulse-source": SOURCE },
       body,
       signal: AbortSignal.timeout(10_000),
     });

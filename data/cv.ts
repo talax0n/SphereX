@@ -61,7 +61,7 @@ export const CV: {
       title: "Fullstack Developer",
       dates: "Dec 2025 – Mar 2026",
       place: "Jakarta Selatan",
-      points: ["Built and maintained employer-facing **admin dashboards** for internal management systems"],
+      points: ["Built and maintained employer-facing **internal tools** for the company's management systems"],
     },
     {
       org: "BINUS University",
