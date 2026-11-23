@@ -147,6 +147,7 @@ export default async function Home() {
   const { version, date } = CHANGELOG[0];
   const gh = await getGitHub();
   const years = [...new Set(CV.awards.map((a) => a.date.slice(-4)))].sort();
+  const prizes = CV.awards.reduce((sum, a) => sum + (a.prize ?? 0), 0);
   const span = years.length > 1 ? `${years[0]}-${years[years.length - 1]}` : years[0];
   return (
     <main className="mx-auto max-w-[46rem] px-5 py-14 text-[14px] leading-[1.75] sm:py-20 sm:text-[15px]">
@@ -203,7 +204,7 @@ export default async function Home() {
 
       <Section id="achievements" title="Achievements">
         <p className="mb-5 text-mute">
-          <Rich text={`**${CV.awards.length}** wins across hackathons and scholarships in ${span}.`} cls="font-bold text-accent" />
+          <Rich text={`**${CV.awards.length}** wins and **$${prizes.toLocaleString("en-US")}** in prizes across hackathons and scholarships in ${span}.`} cls="font-bold text-accent" />
         </p>
         <ul className="space-y-4">
           {CV.awards.map((a) => (
@@ -213,6 +214,7 @@ export default async function Home() {
                 <div>
                   <span className="font-bold">{a.place}</span>
                   {a.project && <> · {a.project}</>}
+                  {a.prize && <span className="font-bold text-accent"> · ${a.prize.toLocaleString("en-US")}</span>}
                   <p className="text-mute">{a.event}{a.by ? ` · ${a.by}` : ""}</p>
                 </div>
                 <p className="text-xs text-mute sm:pt-1">{a.date}</p>

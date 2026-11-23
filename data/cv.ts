@@ -2,7 +2,7 @@ export type Link = { label: string; href: string };
 export type Skill = { name: string; icon: string };
 export type Role = { org: string; title: string; dates: string; place: string; points: string[] };
 export type Project = { name: string; stack: string[]; points: string[]; href?: string; image?: string };
-export type Award = { emoji: string; place: string; project?: string; event: string; by?: string; date: string };
+export type Award = { emoji: string; place: string; project?: string; prize?: number; event: string; by?: string; date: string };
 
 export const CV: {
   name: string;
@@ -107,9 +107,9 @@ export const CV: {
     },
   ],
   awards: [
-    { emoji: "🥈", place: "Second Winner", project: "Octora", event: "Indonesia National Campus Hackathon", date: "May 2026" },
-    { emoji: "🏅", place: "Fourth Winner", project: "Panora", event: "Indonesia National Campus Hackathon", date: "May 2026" },
-    { emoji: "🏆", place: "Second Public Favorite", event: "Startup Village 2026", by: "Superteam Indonesia", date: "Apr 2026" },
+    { emoji: "🥈", place: "Second Winner", project: "Octora", prize: 2500, event: "Indonesia National Campus Hackathon", date: "May 2026" },
+    { emoji: "🏅", place: "Fourth Winner", project: "Panora", prize: 500, event: "Indonesia National Campus Hackathon", date: "May 2026" },
+    { emoji: "🏆", place: "Second Public Favorite", prize: 400, event: "Startup Village 2026", by: "Superteam Indonesia", date: "Apr 2026" },
     { emoji: "🎓", place: "Scholarship Awardee", event: "Mancer Web3 Scholarship", by: "Mancer Work", date: "Apr 2026" },
     { emoji: "⭐", place: "Mentor's Favorite", event: "Kelas Rutin", by: "Blockdev.id", date: "Nov 2025" },
   ],
