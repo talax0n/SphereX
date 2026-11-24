@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { Geist, JetBrains_Mono } from "next/font/google";
 import { CV } from "@/data/cv";
 import "./globals.css";
+
+const sans = Geist({ variable: "--font-geist", subsets: ["latin"] });
 
 const mono = JetBrains_Mono({
   variable: "--font-jb",
@@ -24,7 +26,7 @@ export const viewport = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={mono.variable}>
+    <html lang="en" className={`${sans.variable} ${mono.variable}`}>
       <body>{children}</body>
     </html>
   );

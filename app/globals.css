@@ -29,6 +29,7 @@
 }
 
 @theme inline {
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jb), ui-monospace, monospace;
   --color-bg: var(--bg);
   --color-ink: var(--ink);
@@ -50,7 +51,7 @@ html {
 body {
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-jb), ui-monospace, monospace;
+  font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
 }
 
 ::selection {

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { CV, type Role } from "@/data/cv";
 import { CHANGELOG } from "@/data/changelog";
 import { AiPulse } from "./ai-pulse";
+import { AsciiShape } from "./ascii-shape";
 import { Section } from "./section";
 import { getGitHub, timeAgo, type Day, type GitHub } from "@/data/github";
 
@@ -40,7 +41,7 @@ function Roles({ roles }: { roles: Role[] }) {
         <article key={`${r.org}-${r.dates}`}>
           <div className="flex flex-col sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
             <h3 className="font-bold">{r.org}</h3>
-            <p className="text-xs text-mute">{r.dates}</p>
+            <p className="font-mono text-xs text-mute">{r.dates}</p>
           </div>
           <p className="text-mute">{r.title} · {r.place}</p>
           <Points items={r.points} />
@@ -52,14 +53,26 @@ function Roles({ roles }: { roles: Role[] }) {
 
 const A = ({ children }: { children: ReactNode }) => <strong className="font-bold text-accent">{children}</strong>;
 
+function Stats({ items }: { items: [value: string, label: string][] }) {
+  return (
+    <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-y border-line py-5 sm:grid-cols-4">
+      {items.map(([value, label]) => (
+        <div key={label} className="flex flex-col-reverse">
+          <dt className="text-xs text-mute">{label}</dt>
+          <dd className="font-mono text-2xl font-bold tracking-tight">{value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function Live({ gh }: { gh: GitHub }) {
   const shipping = gh.repos.slice(0, 3);
   return (
-    <p className="mt-4 max-w-[40rem] text-mute">
-      <A>{gh.total.toLocaleString("en-US")}</A> contributions this past year across <A>{gh.repoCount}</A> public repos.
+    <p className="mt-4 text-sm text-mute">
       {shipping.length > 0 && (
         <>
-          {" "}Recently shipping{" "}
+          Recently shipping{" "}
           {shipping.map((r, i) => (
             <span key={r.name}>
               {i > 0 && (i === shipping.length - 1 ? " and " : ", ")}
@@ -119,19 +132,19 @@ function Activity({ gh }: { gh: GitHub }) {
   return (
     <Section id="activity" title="Building in public">
       <Heatmap weeks={gh.weeks} />
-      <p className="mt-3 text-xs text-mute">
+      <p className="mt-3 font-mono text-xs text-mute">
         Longest streak: <A>{gh.longest}</A> days
         {gh.best && <> · Best day: <A>{gh.best.count}</A> on {best}</>}
       </p>
       {gh.repos.length > 0 && (
         <>
           <h3 className="mb-3 mt-8 font-bold">Recent repos</h3>
-          <ul className="space-y-4">
+          <ul className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
             {gh.repos.map((r) => (
               <li key={r.name}>
                 <a href={r.url} className="font-bold transition-colors hover:text-accent">{r.name}</a>
                 {r.description && <p className="text-mute">{r.description}</p>}
-                <p className="text-xs text-mute">
+                <p className="font-mono text-xs text-mute">
                   {[r.language, `★ ${r.stars}`, `pushed ${timeAgo(r.pushedAt)}`].filter(Boolean).join(" · ")}
                 </p>
               </li>
@@ -150,10 +163,22 @@ export default async function Home() {
   const prizes = CV.awards.reduce((sum, a) => sum + (a.prize ?? 0), 0);
   const span = years.length > 1 ? `${years[0]}-${years[years.length - 1]}` : years[0];
   return (
-    <main className="mx-auto max-w-[46rem] px-5 py-14 text-[14px] leading-[1.75] sm:py-20 sm:text-[15px] lg:max-w-[59rem]">
+    <main className="mx-auto max-w-[46rem] px-5 py-14 text-[15px] leading-relaxed sm:py-20 sm:text-base lg:max-w-[59rem]">
       <header>
-        <h1 className="text-4xl font-bold tracking-tight">Hi, I&apos;m Theo.</h1>
-        <p className="mt-3 max-w-[40rem] text-lg leading-snug">{CV.tagline}</p>
+        <div className="flex flex-col-reverse gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
+          <div>
+            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Hi, I&apos;m Theo.</h1>
+            <p className="mt-4 max-w-[36rem] text-xl leading-snug text-mute">{CV.tagline}</p>
+          </div>
+          <AsciiShape className="w-56 shrink-0 lg:-my-8 lg:w-80" />
+        </div>
+        <Stats
+          items={[
+            ...(gh ? ([[gh.total.toLocaleString("en-US"), "contributions this year"], [String(gh.repoCount), "public repos"]] as [string, string][]) : []),
+            [String(CV.awards.length), "hackathon and scholarship wins"],
+            [`$${prizes.toLocaleString("en-US")}`, "in prizes"],
+          ]}
+        />
         {gh && <Live gh={gh} />}
         <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
           <ul className="flex flex-wrap gap-x-5 gap-y-1">
@@ -163,7 +188,7 @@ export default async function Home() {
               </li>
             ))}
           </ul>
-          <nav aria-label="Sections" className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-mute">
+          <nav aria-label="Sections" className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-mute">
             {["experience", "projects", "achievements", ...(gh ? ["activity"] : [])].map((id) => (
               <a key={id} href={`#${id}`} className="transition-colors hover:text-accent">{id}</a>
             ))}
@@ -178,18 +203,23 @@ export default async function Home() {
 
       <Section id="projects" title="Projects">
         <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2">
-          {CV.projects.map((p) => (
-            <article key={p.name}>
+          {CV.projects.map((p, i) => (
+            // With an odd count the first project spans the row, so no card is left alone at the end.
+            <article key={p.name} className={i === 0 && CV.projects.length % 2 ? "sm:col-span-2 sm:grid sm:grid-cols-2 sm:items-center sm:gap-6" : ""}>
               {p.image && (
                 <a href={p.href} className="mb-3 block overflow-hidden rounded-lg border border-line transition-opacity hover:opacity-90">
                   <Image src={p.image} alt={`${p.name} homepage`} width={1280} height={800} sizes="(min-width: 640px) 360px, 100vw" className="h-auto w-full" />
                 </a>
               )}
+              <div>
               <h3 className="font-bold">
                 {p.href ? <a href={p.href} className="transition-colors hover:text-accent">{p.name} <span aria-hidden className="font-normal text-mute">↗</span></a> : p.name}
               </h3>
-              <p className="text-xs text-mute">{p.stack.join(" · ")}</p>
-              <Points items={p.points} />
+              <p className="font-mono text-xs text-mute">{p.stack.join(" · ")}</p>
+              {p.points.map((pt) => (
+                <p key={pt} className="mt-2 text-mute"><Rich text={pt} cls="font-bold text-ink" /></p>
+              ))}
+              </div>
             </article>
           ))}
         </div>
@@ -210,7 +240,7 @@ export default async function Home() {
                   {a.prize && <span className="font-bold text-accent"> · ${a.prize.toLocaleString("en-US")}</span>}
                   <p className="text-mute">{a.event}{a.by ? ` · ${a.by}` : ""}</p>
                 </div>
-                <p className="text-xs text-mute sm:pt-1">{a.date}</p>
+                <p className="font-mono text-xs text-mute sm:pt-1">{a.date}</p>
               </div>
             </li>
           ))}
@@ -226,14 +256,17 @@ export default async function Home() {
       <Section title="Skills">
         <dl className="space-y-4">
           {CV.skills.map(([cat, items]) => (
-            <div key={cat} className="sm:flex sm:items-center sm:gap-4">
-              <dt className="mb-2 font-bold sm:mb-0 sm:w-36 sm:shrink-0">{cat}</dt>
+            <div key={cat} className="sm:flex sm:items-start sm:gap-4">
+              <dt className="mb-2 font-bold sm:mb-0 sm:w-32 sm:shrink-0 sm:pt-1">{cat}</dt>
               <dd>
                 <ul className="flex flex-wrap gap-2">
                   {items.map((s) => (
                     // Light tile in both themes, so dark logos (Next.js, Rust, Flask) stay visible in dark mode.
-                    <li key={s.name} title={s.name} className="grid size-10 place-items-center rounded-md border border-line bg-tile">
-                      <Image src={s.icon} alt={s.name} width={24} height={24} className="size-6 object-contain" />
+                    <li key={s.name} className="flex items-center gap-2 rounded-md border border-line py-1 pr-2.5 pl-1 font-mono text-xs">
+                      <span className="grid size-6 place-items-center rounded bg-tile">
+                        <Image src={s.icon} alt="" width={16} height={16} className="size-4 object-contain" />
+                      </span>
+                      {s.name}
                     </li>
                   ))}
                 </ul>
@@ -243,7 +276,7 @@ export default async function Home() {
         </dl>
       </Section>
 
-      <footer className="mt-12 border-t border-line pt-4 text-xs text-mute">
+      <footer className="mt-12 border-t border-line pt-4 font-mono text-xs text-mute">
         v{version} · updated {date}
       </footer>
       <AiPulse />

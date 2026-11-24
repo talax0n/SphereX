@@ -8,10 +8,15 @@ export interface Release {
 /** newest first */
 export const CHANGELOG: Release[] = [
   {
-    version: "3.1.4",
+    version: "3.2.0",
     date: "2026-11-25",
     title: "A cleaner page",
     notes: [
+      "The page now reads in a plain sans font, with the monospace kept for dates and small details.",
+      "My numbers sit in a row under the intro: contributions, repos, wins and prize money.",
+      "The first project gets a wide card, and each skill now shows its name next to the icon.",
+      "A spinning ASCII shape sits beside my name, morphing between a donut, a computer, a game controller, and the Claude, OpenAI, DeepSeek, Solana and Ethereum logos.",
+      "It tilts toward your cursor.",
       "Each section now has a quiet label and a thin line above it, so the page is easier to scan.",
       "On wide screens the labels sit beside the content.",
       "Links are underlined in the text colour now, and orange is kept for the numbers.",
