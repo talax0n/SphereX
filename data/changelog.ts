@@ -8,6 +8,17 @@ export interface Release {
 /** newest first */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.1.4",
+    date: "2026-11-25",
+    title: "A cleaner page",
+    notes: [
+      "Each section now has a quiet label and a thin line above it, so the page is easier to scan.",
+      "On wide screens the labels sit beside the content.",
+      "Links are underlined in the text colour now, and orange is kept for the numbers.",
+      "The skill icons sit on softer tiles in dark mode.",
+    ],
+  },
+  {
     version: "3.1.3",
     date: "2026-11-25",
     title: "More projects",

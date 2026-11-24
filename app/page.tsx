@@ -12,7 +12,7 @@ const LEVEL_PCT = [0, 30, 55, 80, 100];
 const cell = (level: number) =>
   level ? `color-mix(in srgb, var(--green) ${LEVEL_PCT[level]}%, var(--line))` : "var(--line)";
 
-const linkCls = "text-link underline-offset-4 hover:underline";
+const linkCls = "underline decoration-mute/50 underline-offset-4 transition-colors hover:text-accent hover:decoration-accent";
 
 // Points mark bold with **text**; odd segments after splitting are bold.
 function Rich({ text, cls = "font-bold" }: { text: string; cls?: string }) {
@@ -25,7 +25,7 @@ function Points({ items }: { items: string[] }) {
     <ul className="mt-2 space-y-1">
       {items.map((p) => (
         <li key={p} className="flex gap-2">
-          <span className="text-accent" aria-hidden>-</span>
+          <span className="text-mute" aria-hidden>–</span>
           <span><Rich text={p} /></span>
         </li>
       ))}
@@ -55,7 +55,7 @@ const A = ({ children }: { children: ReactNode }) => <strong className="font-bol
 function Live({ gh }: { gh: GitHub }) {
   const shipping = gh.repos.slice(0, 3);
   return (
-    <p className="mt-4 text-mute">
+    <p className="mt-4 max-w-[40rem] text-mute">
       <A>{gh.total.toLocaleString("en-US")}</A> contributions this past year across <A>{gh.repoCount}</A> public repos.
       {shipping.length > 0 && (
         <>
@@ -63,7 +63,7 @@ function Live({ gh }: { gh: GitHub }) {
           {shipping.map((r, i) => (
             <span key={r.name}>
               {i > 0 && (i === shipping.length - 1 ? " and " : ", ")}
-              <a href={r.url} className="font-bold text-accent underline-offset-4 hover:underline">{r.name}</a>
+              <a href={r.url} className={`text-ink ${linkCls}`}>{r.name}</a>
             </span>
           ))}{" "}
           (latest: {timeAgo(gh.repos[0].pushedAt)}).
@@ -129,8 +129,8 @@ function Activity({ gh }: { gh: GitHub }) {
           <ul className="space-y-4">
             {gh.repos.map((r) => (
               <li key={r.name}>
-                <a href={r.url} className={`font-bold ${linkCls}`}>{r.name}</a>
-                {r.description && <p>{r.description}</p>}
+                <a href={r.url} className="font-bold transition-colors hover:text-accent">{r.name}</a>
+                {r.description && <p className="text-mute">{r.description}</p>}
                 <p className="text-xs text-mute">
                   {[r.language, `★ ${r.stars}`, `pushed ${timeAgo(r.pushedAt)}`].filter(Boolean).join(" · ")}
                 </p>
@@ -150,32 +150,25 @@ export default async function Home() {
   const prizes = CV.awards.reduce((sum, a) => sum + (a.prize ?? 0), 0);
   const span = years.length > 1 ? `${years[0]}-${years[years.length - 1]}` : years[0];
   return (
-    <main className="mx-auto max-w-[46rem] px-5 py-14 text-[14px] leading-[1.75] sm:py-20 sm:text-[15px]">
+    <main className="mx-auto max-w-[46rem] px-5 py-14 text-[14px] leading-[1.75] sm:py-20 sm:text-[15px] lg:max-w-[59rem]">
       <header>
         <h1 className="text-4xl font-bold tracking-tight">Hi, I&apos;m Theo.</h1>
-        <p className="mt-3 text-lg">{CV.tagline}</p>
+        <p className="mt-3 max-w-[40rem] text-lg leading-snug">{CV.tagline}</p>
         {gh && <Live gh={gh} />}
-        <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-1">
-          {CV.links.map((l) => (
-            <li key={l.href}>
-              <a href={l.href} className={linkCls}>{l.label}</a>
-            </li>
-          ))}
-        </ul>
-        <nav aria-label="Sections" className="mt-2 flex flex-wrap gap-x-2 text-xs text-mute">
-          Explore:
-          {[
-            ["experience", "experience"],
-            ["projects", "projects"],
-            ["achievements", "achievements"],
-            ...(gh ? [["activity", "activity"]] : []),
-          ].map(([id, label], i, all) => (
-            <span key={id}>
-              <a href={`#${id}`} className={linkCls}>{label}</a>
-              {i < all.length - 1 && " ·"}
-            </span>
-          ))}
-        </nav>
+        <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
+          <ul className="flex flex-wrap gap-x-5 gap-y-1">
+            {CV.links.map((l) => (
+              <li key={l.href}>
+                <a href={l.href} className={linkCls}>{l.label}</a>
+              </li>
+            ))}
+          </ul>
+          <nav aria-label="Sections" className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-mute">
+            {["experience", "projects", "achievements", ...(gh ? ["activity"] : [])].map((id) => (
+              <a key={id} href={`#${id}`} className="transition-colors hover:text-accent">{id}</a>
+            ))}
+          </nav>
+        </div>
       </header>
 
 
@@ -188,12 +181,12 @@ export default async function Home() {
           {CV.projects.map((p) => (
             <article key={p.name}>
               {p.image && (
-                <a href={p.href} className="mb-3 block overflow-hidden rounded-md border border-line transition-opacity hover:opacity-90">
+                <a href={p.href} className="mb-3 block overflow-hidden rounded-lg border border-line transition-opacity hover:opacity-90">
                   <Image src={p.image} alt={`${p.name} homepage`} width={1280} height={800} sizes="(min-width: 640px) 360px, 100vw" className="h-auto w-full" />
                 </a>
               )}
               <h3 className="font-bold">
-                {p.href ? <a href={p.href} className={linkCls}>{p.name} ↗</a> : p.name}
+                {p.href ? <a href={p.href} className="transition-colors hover:text-accent">{p.name} <span aria-hidden className="font-normal text-mute">↗</span></a> : p.name}
               </h3>
               <p className="text-xs text-mute">{p.stack.join(" · ")}</p>
               <Points items={p.points} />
@@ -238,8 +231,8 @@ export default async function Home() {
               <dd>
                 <ul className="flex flex-wrap gap-2">
                   {items.map((s) => (
-                    // White tile in both themes, so dark logos (Next.js, Rust, Flask) stay visible in dark mode.
-                    <li key={s.name} title={s.name} className="grid size-10 place-items-center rounded-md border border-line bg-white">
+                    // Light tile in both themes, so dark logos (Next.js, Rust, Flask) stay visible in dark mode.
+                    <li key={s.name} title={s.name} className="grid size-10 place-items-center rounded-md border border-line bg-tile">
                       <Image src={s.icon} alt={s.name} width={24} height={24} className="size-6 object-contain" />
                     </li>
                   ))}
@@ -250,7 +243,7 @@ export default async function Home() {
         </dl>
       </Section>
 
-      <footer className="mt-16 border-t border-line pt-4 text-xs text-mute">
+      <footer className="mt-12 border-t border-line pt-4 text-xs text-mute">
         v{version} · updated {date}
       </footer>
       <AiPulse />
