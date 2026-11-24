@@ -114,12 +114,14 @@ export const CV: {
     },
     {
       name: "Aeron",
+      image: "/projects/aeron.png",
       stack: ["TypeScript", "Electron", "React", "Playwright", "Docker"],
       href: "https://github.com/talax0n/aeron-releases",
       points: ["Desktop grading pipeline for lab corrections: sandboxed test runs, two LLMs grade blind and a council settles disputes, then marks autofill the grid after human review"],
     },
     {
       name: "Bilinkers",
+      image: "/projects/bilinkers.png",
       stack: ["Rust", "Chrome DevTools Protocol", "Codex CLI"],
       href: "https://github.com/talax0n/bilinkers",
       points: ["Desktop bot that drives a browser through LMS courses, detecting each page type and completing exercises, with an LLM for open questions"],

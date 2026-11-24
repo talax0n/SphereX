@@ -15,6 +15,7 @@ export const CHANGELOG: Release[] = [
       "Ether, my Android app for finding a hackathon team by swiping, is now in my projects.",
       "Aeron, my desktop app that helps lab assistants grade with AI, is in there too.",
       "So is Bilinkers, a bot that works through online course exercises for you.",
+      "Every project card now has a screenshot.",
     ],
   },
   {
