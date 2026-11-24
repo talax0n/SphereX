@@ -112,6 +112,18 @@ export const CV: {
       href: "https://github.com/talax0n/Ether",
       points: ["Swipe-to-match Android app for forming hackathon teams: per-competition decks, mutual matches auto-form teams, outcome-based XP and badges"],
     },
+    {
+      name: "Aeron",
+      stack: ["TypeScript", "Electron", "React", "Playwright", "Docker"],
+      href: "https://github.com/talax0n/aeron-releases",
+      points: ["Desktop grading pipeline for lab corrections: sandboxed test runs, two LLMs grade blind and a council settles disputes, then marks autofill the grid after human review"],
+    },
+    {
+      name: "Bilinkers",
+      stack: ["Rust", "Chrome DevTools Protocol", "Codex CLI"],
+      href: "https://github.com/talax0n/bilinkers",
+      points: ["Desktop bot that drives a browser through LMS courses, detecting each page type and completing exercises, with an LLM for open questions"],
+    },
   ],
   awards: [
     { emoji: "🥈", place: "Second Winner", project: "Octora", prize: 2500, event: "Indonesia National Campus Hackathon", date: "May 2026" },
