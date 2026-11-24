@@ -8,6 +8,12 @@ export interface Release {
 /** newest first */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.1.3",
+    date: "2026-11-25",
+    title: "Ether",
+    notes: ["Ether, my Android app for finding a hackathon team by swiping, is now in my projects."],
+  },
+  {
     version: "3.1.2",
     date: "2026-11-23",
     title: "Prize money",

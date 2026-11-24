@@ -105,6 +105,13 @@ export const CV: {
       href: "https://xflare.app/",
       points: ["Crypto trading platform with portfolio dashboard, referral tree, and points system"],
     },
+    {
+      name: "Ether",
+      image: "/projects/ether.png",
+      stack: ["Kotlin", "Jetpack Compose", "Supabase", "PostgreSQL"],
+      href: "https://github.com/talax0n/Ether",
+      points: ["Swipe-to-match Android app for forming hackathon teams: per-competition decks, mutual matches auto-form teams, outcome-based XP and badges"],
+    },
   ],
   awards: [
     { emoji: "🥈", place: "Second Winner", project: "Octora", prize: 2500, event: "Indonesia National Campus Hackathon", date: "May 2026" },
