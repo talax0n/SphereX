@@ -3,13 +3,15 @@
  * PRIVACY: lines are parsed in memory; only model ids and numbers are kept, cached or returned.
  * Per-file state lives in ~/.cache/porto-usage-v2.json so a restart resumes instead of re-reading gigabytes.
  */
-import { closeSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readFileSync, readSync, readdirSync, renameSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
+import * as zlib from "node:zlib";
 import { type Bucket, MAX_DAYS, MAX_MODELS, MODEL_ID, type Provider, type Tally, type Usage, addBucket, addTally } from "../data/pulse.ts";
 
 const CACHE = join(homedir(), ".cache/porto-usage-v2.json");
 const RATES = join(homedir(), ".t3/userdata/usage-model-rates.json");
+const T3_CACHE = join(homedir(), ".t3/userdata/usage-scan-cache-v17.json");
 const SLICE_MS = 150;
 const CHUNK = 16 * 1024 * 1024;
 const SAVE_MS = 30_000;
@@ -29,6 +31,17 @@ interface FileState {
   /** earliest day with usage; the session counts there */
   firstDay?: string;
   since: number;
+  /** never read again: an imported record, or a compressed rollout read to its end */
+  done?: boolean;
+}
+
+/** a Codex rollout moves between sessions/, archived_sessions/ and .jsonl/.jsonl.zst; its basename sans .zst does not */
+const codexKey = (path: string) => `codex:${basename(path).replace(/\.zst$/, "")}`;
+interface Job {
+  key: string;
+  path: string;
+  provider: Provider;
+  isSession: boolean;
 }
 
 let files: Record<string, FileState> = {};
@@ -36,8 +49,11 @@ let loaded = false;
 let dirty = false;
 let savedAt = 0;
 let discoveredAt = 0;
-let queue: [string, Provider, boolean][] = [];
+let queue: Job[] = [];
 let complete = false;
+let imported = false;
+/** the decompressed rollout being worked on; only one is held at a time */
+let zst: { path: string; buf: Buffer } | null = null;
 let snapshot: Usage | null = null;
 let snapshotAt = 0;
 
@@ -139,24 +155,45 @@ function lineOf(s: FileState, l: string) {
   } catch {}
 }
 
-/** reads one chunk past s.offset; returns false when there was nothing complete to read */
+// ponytail: @types/node here predates zstd; the runtime (Node 22.15+) has it
+const zstdDecompressSync = (zlib as unknown as { zstdDecompressSync(b: Buffer): Buffer }).zstdDecompressSync;
+const isZst = (path: string) => path.endsWith(".zst");
+
+/** bytes of the file's plain content; offsets are in uncompressed bytes for both kinds */
+function plain(path: string): Buffer | null {
+  if (!isZst(path)) return null;
+  if (zst?.path !== path) zst = { path, buf: zstdDecompressSync(readFileSync(path)) };
+  return zst.buf;
+}
+
+function sizeOf(path: string): number {
+  return plain(path)?.length ?? statSync(path).size;
+}
+
+/** reads one chunk past s.offset */
 function readChunk(path: string, s: FileState, size: number): void {
-  const fd = openSync(path, "r");
-  try {
-    const buf = Buffer.alloc(Math.min(CHUNK, size - s.offset));
-    const n = readSync(fd, buf, 0, buf.length, s.offset);
-    const end = buf.lastIndexOf(10, n - 1);
-    if (end < 0) {
-      // ponytail: a line over the chunk size is a pasted image or tool output, never a usage record; skip it
-      if (n === CHUNK) s.offset += n;
-      return;
+  const whole = plain(path);
+  let buf: Buffer;
+  if (whole) buf = whole.subarray(s.offset, s.offset + Math.min(CHUNK, size - s.offset));
+  else {
+    const fd = openSync(path, "r");
+    try {
+      buf = Buffer.alloc(Math.min(CHUNK, size - s.offset));
+      buf = buf.subarray(0, readSync(fd, buf, 0, buf.length, s.offset));
+    } finally {
+      closeSync(fd);
     }
-    s.offset += end + 1;
-    for (const l of buf.toString("utf8", 0, end).split("\n")) if (l) lineOf(s, l);
-    dirty = true;
-  } finally {
-    closeSync(fd);
   }
+  const n = buf.length;
+  const end = buf.lastIndexOf(10, n - 1);
+  if (end < 0) {
+    // ponytail: a line over the chunk size is a pasted image or tool output, never a usage record; skip it
+    if (n === CHUNK) s.offset += n;
+    return;
+  }
+  s.offset += end + 1;
+  for (const l of buf.toString("utf8", 0, end).split("\n")) if (l) lineOf(s, l);
+  dirty = true;
 }
 
 const list = (dir: string) => {
@@ -171,25 +208,68 @@ function walk(dir: string, out: string[]) {
   for (const e of list(dir)) {
     const p = join(dir, e.name);
     if (e.isDirectory()) walk(p, out);
-    else if (e.name.endsWith(".jsonl")) out.push(p);
+    else if (e.name.endsWith(".jsonl") || e.name.endsWith(".jsonl.zst")) out.push(p);
   }
 }
 
-function discover(): [string, Provider, boolean][] {
-  const out: [string, Provider, boolean][] = [];
+function discover(): Job[] {
+  const out = new Map<string, Job>();
+  const add = (key: string, path: string, provider: Provider, isSession: boolean) => {
+    if (!files[key]?.done && !out.has(key)) out.set(key, { key, path, provider, isSession });
+  };
   const claude = join(homedir(), ".claude/projects");
   for (const p of list(claude).filter((e) => e.isDirectory()))
     for (const f of list(join(claude, p.name))) {
       const path = join(claude, p.name, f.name);
-      if (f.isFile() && f.name.endsWith(".jsonl")) out.push([path, "claude", true]);
-      else if (f.isDirectory()) for (const a of list(join(path, "subagents"))) if (a.name.endsWith(".jsonl")) out.push([join(path, "subagents", a.name), "claude", false]);
+      if (f.isFile() && f.name.endsWith(".jsonl")) add(path, path, "claude", true);
+      else if (f.isDirectory()) for (const a of list(join(path, "subagents"))) if (a.name.endsWith(".jsonl")) add(join(path, "subagents", a.name), join(path, "subagents", a.name), "claude", false);
     }
   for (const h of list(homedir()).filter((e) => e.isDirectory() && e.name.startsWith(".codex"))) {
     const paths: string[] = [];
-    walk(join(homedir(), h.name, "sessions"), paths);
-    for (const path of paths) out.push([path, "codex", true]);
+    for (const dir of ["sessions", "archived_sessions"]) walk(join(homedir(), h.name, dir), paths);
+    for (const path of paths) add(codexKey(path), path, "codex", true);
   }
-  return out;
+  return [...out.values()];
+}
+
+/** v2 cache keyed Codex files by path; rekey them, keeping the further-read entry so nothing counts twice */
+function migrate() {
+  for (const [k, s] of Object.entries(files)) {
+    if (s.provider !== "codex" || k.startsWith("codex:")) continue;
+    const key = codexKey(k);
+    if (!files[key] || files[key].offset < s.offset) files[key] = s;
+    delete files[k];
+    dirty = true;
+  }
+}
+
+/**
+ * Claude deletes transcripts after 30 days and Codex archives them, so T3 Code's own cache can be the only copy left.
+ * Records that no file on disk can reproduce are copied into ours once and never touched again.
+ */
+function importT3() {
+  let t3: { version?: number; models?: unknown; files?: unknown };
+  try {
+    t3 = JSON.parse(readFileSync(T3_CACHE, "utf8"));
+  } catch {
+    return;
+  }
+  if (t3.version !== 17 || !Array.isArray(t3.models) || typeof t3.files !== "object" || !t3.files) return;
+  const models = t3.models as unknown[];
+  for (const [path, f] of Object.entries(t3.files as Record<string, { p?: unknown; r?: unknown }>)) {
+    const provider = f?.p;
+    if ((provider !== "claude" && provider !== "codex") || !Array.isArray(f.r)) continue;
+    const key = provider === "codex" ? codexKey(path) : path;
+    if (files[key] || existsSync(path) || existsSync(`${path}.zst`) || existsSync(path.replace(/\.zst$/, ""))) continue;
+    const s: FileState = { offset: 0, isSession: provider === "codex" || !path.includes("/subagents/"), provider, days: {}, since: 0, done: true };
+    for (const r of f.r as unknown[]) {
+      if (!Array.isArray(r)) continue;
+      const model = models[r[1] as number];
+      if (typeof model === "string") record(s, model, r[0], num(r[3]), num(r[6]), num(r[4]), num(r[5]));
+    }
+    if (s.firstDay) files[key] = s;
+  }
+  dirty = true;
 }
 
 function save() {
@@ -243,40 +323,55 @@ export function usageTick(): void {
     } catch {
       files = {};
     }
+    migrate();
   }
   if (queue.length === 0 && t0 - discoveredAt > DISCOVER_MS) {
     discoveredAt = t0;
     queue = discover();
   }
   while (queue.length && Date.now() - t0 < SLICE_MS) {
-    const [path, provider, isSession] = queue[queue.length - 1];
+    const { key, path, provider, isSession } = queue[queue.length - 1];
     let size: number;
     try {
-      size = statSync(path).size;
+      size = sizeOf(path);
     } catch {
+      // an unreadable compressed rollout is final, so it is not retried every discovery
+      if (isZst(path)) (files[key] ??= { offset: 0, isSession, provider, days: {}, since: 0 }).done = true;
       queue.pop();
       continue;
     }
-    const s = (files[path] ??= { offset: 0, isSession, provider, days: {}, since: 0 });
+    const s = (files[key] ??= { offset: 0, isSession, provider, days: {}, since: 0 });
+    let finished = true;
     // a truncated file is left alone: totals never shrink
     if (size > s.offset) {
       const before = s.offset;
       try {
         readChunk(path, s, size);
-      } catch {
-        queue.pop();
-        continue;
+        // more to read on the next slice; no complete line yet means still being written, picked up next discovery
+        finished = s.offset === before || s.offset >= size;
+      } catch {}
+    }
+    if (finished) {
+      queue.pop();
+      if (isZst(path)) {
+        s.done = true;
+        zst = null;
       }
-      // no complete line yet (still being written): move on, it is picked up next discovery
-      if (s.offset === before || s.offset >= size) queue.pop();
-    } else queue.pop();
+    }
   }
   const now = Date.now();
   if (queue.length === 0 && !complete) {
     complete = true;
     if (dirty) save();
   }
-  if (complete && now - snapshotAt > AGGREGATE_MS) {
+  let fresh = false;
+  if (complete && !imported) {
+    imported = true;
+    fresh = true;
+    importT3();
+  }
+  if (fresh && dirty) save();
+  if (complete && (fresh || now - snapshotAt > AGGREGATE_MS)) {
     snapshot = aggregate();
     snapshotAt = now;
   }

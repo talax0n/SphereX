@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { type Provider, type Pulse, ago, say } from "@/data/pulse";
+import { useEffect, useState } from "react";
+import { type Provider, type Pulse, ago, costOf, say } from "@/data/pulse";
 import { AiStats } from "./ai-stats";
 
 const POLL_MS = 5_000;
-const TAPS = 3;
-const TAP_WINDOW_MS = 1_500;
+const USD = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", notation: "compact", maximumFractionDigits: 1 });
 
 // Paths from Simple Icons. Codex uses OpenAI's mark in currentColor so it reads on the badge in both themes.
 export const PROVIDER: Record<Provider, { label: string; d: string; color: string }> = {
@@ -27,7 +26,6 @@ export function ProviderIcon({ provider }: { provider: Provider }) {
 export function AiPulse() {
   const [state, setState] = useState<{ pulse: Pulse; at: number } | null>(null);
   const [stats, setStats] = useState(false);
-  const taps = useRef<number[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -61,15 +59,8 @@ export function AiPulse() {
     : live
       ? `${agents.length} agents working`
       : `agents resting · ${ago(state.at - lastSeen)}`;
-  // easter egg: three quick taps on the title open the all-time stats
-  const tap = () => {
-    const now = Date.now();
-    taps.current = [...taps.current.filter((t) => now - t < TAP_WINDOW_MS), now];
-    if (taps.current.length >= TAPS && state.pulse.usage) {
-      taps.current = [];
-      setStats(true);
-    }
-  };
+  const usage = state.pulse.usage;
+  const spent = usage ? Object.values(usage.all.models).reduce((a, t) => a + costOf(t), 0) : 0;
   const providers = [...new Set(agents.map((a) => a.provider))];
 
   // Native <details> gives the open/close toggle and keyboard support without extra state.
@@ -89,9 +80,7 @@ export function AiPulse() {
         <span className="shrink-0 font-bold">{runsToday} today</span>
       </summary>
       <div className="absolute right-0 bottom-full mb-2 w-72 max-w-[calc(100vw-2rem)] rounded-md bg-badge p-3 text-badge-ink shadow-lg">
-        <button type="button" onClick={tap} className="block cursor-default p-0 text-left font-bold">
-          AI at work
-        </button>
+        <p className="font-bold">AI at work</p>
         <p className="mt-1 text-badge-ink/70">I build with Claude Code and Codex every day. This is what my agents are doing right now.</p>
         {live ? (
           <ul className="mt-3 space-y-1.5">
@@ -109,9 +98,19 @@ export function AiPulse() {
         <p className="mt-3 text-badge-ink/70">
           {runsToday} agent {runsToday === 1 ? "session" : "sessions"} today.
         </p>
+        {usage && (
+          <button
+            type="button"
+            onClick={() => setStats(true)}
+            className="mt-3 flex w-full cursor-pointer items-center justify-between gap-2 rounded-md border border-badge-ink/20 px-2.5 py-2 text-left hover:bg-badge-ink/10"
+          >
+            <span className="font-bold">See my AI usage</span>
+            <span className="text-badge-ink/70">{USD.format(spent)} all-time →</span>
+          </button>
+        )}
       </div>
     </details>
-    {stats && state.pulse.usage && <AiStats usage={state.pulse.usage} onClose={() => setStats(false)} />}
+    {stats && usage && <AiStats usage={usage} onClose={() => setStats(false)} />}
     </>
   );
 }
