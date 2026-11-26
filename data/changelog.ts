@@ -8,6 +8,17 @@ export interface Release {
 /** newest first */
 export const CHANGELOG: Release[] = [
   {
+    version: "3.3.0",
+    date: "2026-11-27",
+    title: "A secret in the AI badge",
+    notes: [
+      "I hid something in the AI at work badge.",
+      "It is about how much my agents have really done.",
+      "It now has charts, a breakdown by model and day, and a few ways to slice the numbers.",
+      "Poke around and you might find it.",
+    ],
+  },
+  {
     version: "3.2.0",
     date: "2026-11-25",
     title: "A cleaner page",

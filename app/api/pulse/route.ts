@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { MAX_AGENTS, type Pulse, parsePulse } from "@/data/pulse";
+import { MAX_AGENTS, type Pulse, addUsage, parsePulse } from "@/data/pulse";
 import { hasRedis, redis } from "@/lib/redis";
 
 /** a machine that hasn't posted for this long is asleep; its watcher heartbeats every minute */
@@ -7,7 +7,7 @@ const STALE_MS = 150_000;
 /** past this a machine's runsToday belongs to another day, so only its lastSeen still counts */
 const GONE_MS = 12 * 3_600_000;
 const SOURCE = /^[0-9a-f]{8}$/;
-const EMPTY: Pulse = { agents: [], lastSeen: 0, runsToday: 0 };
+const EMPTY: Pulse = { agents: [], lastSeen: 0, runsToday: 0, usage: null };
 
 type Stored = { pulse: Pulse; at: number };
 
@@ -68,6 +68,8 @@ export async function GET() {
       if (!stored) continue;
       const age = now - stored.at;
       merged.lastSeen = Math.max(merged.lastSeen, stored.pulse.lastSeen);
+      // all-time totals, so a machine that is asleep or gone still counts
+      merged.usage = addUsage(merged.usage, stored.pulse.usage);
       if (age > GONE_MS) continue;
       merged.runsToday += stored.pulse.runsToday;
       if (age <= STALE_MS) merged.agents.push(...stored.pulse.agents);

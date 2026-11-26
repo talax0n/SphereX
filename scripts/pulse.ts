@@ -10,6 +10,7 @@ import { basename, join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { type Agent, MAX_AGENTS, type Provider, type Pulse, cleanTitle, kindOf } from "../data/pulse.ts";
+import { usageSnapshot, usageTick } from "./usage.ts";
 
 const ENDPOINT = process.env.PULSE_URL;
 const SECRET = process.env.PULSE_SECRET;
@@ -226,6 +227,7 @@ function read(path: string, s: Session, size: number) {
 }
 
 function scan(): Pulse {
+  usageTick();
   const now = Date.now();
   if (new Date(now).toDateString() !== day) {
     day = new Date(now).toDateString();
@@ -287,7 +289,7 @@ function scan(): Pulse {
       return !seen.has(key) && seen.add(key);
     })
     .slice(0, MAX_AGENTS);
-  return { agents, lastSeen, runsToday: countedToday.size };
+  return { agents, lastSeen, runsToday: countedToday.size, usage: usageSnapshot() };
 }
 
 let sent = "";
