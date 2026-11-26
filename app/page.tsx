@@ -53,19 +53,6 @@ function Roles({ roles }: { roles: Role[] }) {
 
 const A = ({ children }: { children: ReactNode }) => <strong className="font-bold text-accent">{children}</strong>;
 
-function Stats({ items }: { items: [value: string, label: string][] }) {
-  return (
-    <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 border-y border-line py-5 sm:grid-cols-4">
-      {items.map(([value, label]) => (
-        <div key={label} className="flex flex-col-reverse">
-          <dt className="text-xs text-mute">{label}</dt>
-          <dd className="font-mono text-2xl font-bold tracking-tight">{value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
 function Live({ gh }: { gh: GitHub }) {
   const shipping = gh.repos.slice(0, 3);
   return (
@@ -130,28 +117,13 @@ function Heatmap({ weeks }: { weeks: Day[][] }) {
 function Activity({ gh }: { gh: GitHub }) {
   const best = gh.best && new Date(`${gh.best.date}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
   return (
-    <Section id="activity" title="Building in public">
+    <Section id="activity" title="Activity">
       <Heatmap weeks={gh.weeks} />
       <p className="mt-3 font-mono text-xs text-mute">
         Longest streak: <A>{gh.longest}</A> days
         {gh.best && <> · Best day: <A>{gh.best.count}</A> on {best}</>}
       </p>
-      {gh.repos.length > 0 && (
-        <>
-          <h3 className="mb-3 mt-8 font-bold">Recent repos</h3>
-          <ul className="grid gap-x-6 gap-y-5 sm:grid-cols-2">
-            {gh.repos.map((r) => (
-              <li key={r.name}>
-                <a href={r.url} className="font-bold transition-colors hover:text-accent">{r.name}</a>
-                {r.description && <p className="text-mute">{r.description}</p>}
-                <p className="font-mono text-xs text-mute">
-                  {[r.language, `★ ${r.stars}`, `pushed ${timeAgo(r.pushedAt)}`].filter(Boolean).join(" · ")}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+      <Live gh={gh} />
     </Section>
   );
 }
@@ -162,124 +134,108 @@ export default async function Home() {
   const years = [...new Set(CV.awards.map((a) => a.date.slice(-4)))].sort();
   const prizes = CV.awards.reduce((sum, a) => sum + (a.prize ?? 0), 0);
   const span = years.length > 1 ? `${years[0]}-${years[years.length - 1]}` : years[0];
+  const email = CV.links.find((l) => l.href.startsWith("mailto:"))?.href.slice("mailto:".length);
   return (
     <main className="mx-auto max-w-[46rem] px-5 py-14 text-[15px] leading-relaxed sm:py-20 sm:text-base lg:max-w-[59rem]">
-      <header>
-        <div className="flex flex-col-reverse gap-6 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Hi, I&apos;m Theo.</h1>
-            <p className="mt-4 max-w-[36rem] text-xl leading-snug text-mute">{CV.tagline}</p>
-          </div>
-          <AsciiShape className="w-56 shrink-0 lg:-my-8 lg:w-80" />
+      <div className="flex items-baseline justify-between gap-4 font-mono text-xs text-mute">
+        <span>Theola Niomba</span>
+        <nav aria-label="Sections" className="flex gap-x-4">
+          {[["Work", "work"], ["Experience", "experience"], ["Contact", "contact"]].map(([label, id]) => (
+            <a key={id} href={`#${id}`} className="transition-colors hover:text-accent">{label}</a>
+          ))}
+        </nav>
+      </div>
+
+      <header className="mt-14 flex flex-col-reverse gap-6 sm:mt-20 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
+        <div>
+          <h1 className="text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">{CV.headline}</h1>
+          <p className="mt-6 max-w-[36rem] text-lg leading-snug text-mute sm:text-xl">
+            Fullstack &amp; smart contract engineer. Two mainnet protocols, 150+ users, up to $50k AUM. {CV.awards.length} hackathon and scholarship wins and ${prizes.toLocaleString("en-US")} in prizes.
+          </p>
         </div>
-        <Stats
-          items={[
-            ...(gh ? ([[gh.total.toLocaleString("en-US"), "contributions this year"], [String(gh.repoCount), "public repos"]] as [string, string][]) : []),
-            [String(CV.awards.length), "hackathon and scholarship wins"],
-            [`$${prizes.toLocaleString("en-US")}`, "in prizes"],
-          ]}
-        />
-        {gh && <Live gh={gh} />}
-        <div className="mt-6 flex flex-wrap items-baseline justify-between gap-x-8 gap-y-2">
-          <ul className="flex flex-wrap gap-x-5 gap-y-1">
-            {CV.links.map((l) => (
-              <li key={l.href}>
-                <a href={l.href} className={linkCls}>{l.label}</a>
-              </li>
-            ))}
-          </ul>
-          <nav aria-label="Sections" className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-xs text-mute">
-            {["experience", "projects", "achievements", ...(gh ? ["activity"] : [])].map((id) => (
-              <a key={id} href={`#${id}`} className="transition-colors hover:text-accent">{id}</a>
-            ))}
-          </nav>
-        </div>
+        <AsciiShape className="w-56 shrink-0 lg:-my-8 lg:w-80" />
       </header>
 
+      <Section id="work" title="Work">
+        <ol>
+          {CV.projects.map((p, i) => (
+            <li key={p.name} className="flex flex-col gap-4 border-t border-line py-6 first:border-t-0 first:pt-0 sm:flex-row-reverse sm:justify-between sm:gap-6">
+              {p.image && (
+                <a href={p.href} className="block overflow-hidden rounded-lg border border-line transition-opacity hover:opacity-90 sm:w-44 sm:shrink-0 lg:w-52">
+                  <Image src={p.image} alt={`${p.name} homepage`} width={1280} height={800} sizes="(min-width: 1024px) 208px, (min-width: 640px) 176px, 100vw" className="h-auto w-full" />
+                </a>
+              )}
+              <div className="flex gap-4">
+                <span className="pt-0.5 font-mono text-xs text-mute">{String(i + 1).padStart(2, "0")}</span>
+                <div>
+                  <h3 className="font-bold">
+                    {p.href ? <a href={p.href} className="transition-colors hover:text-accent">{p.name} <span aria-hidden className="font-normal text-mute">↗</span></a> : p.name}
+                  </h3>
+                  {p.points.map((pt) => (
+                    <p key={pt} className="mt-1 text-mute"><Rich text={pt} cls="font-bold text-ink" /></p>
+                  ))}
+                  <p className="mt-2 font-mono text-xs text-mute">{p.stack.join(" · ")}</p>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </Section>
 
       <Section id="experience" title="Experience">
         <Roles roles={CV.experience} />
       </Section>
 
-      <Section id="projects" title="Projects">
-        <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2">
-          {CV.projects.map((p, i) => (
-            // With an odd count the first project spans the row, so no card is left alone at the end.
-            <article key={p.name} className={i === 0 && CV.projects.length % 2 ? "sm:col-span-2 sm:grid sm:grid-cols-2 sm:items-center sm:gap-6" : ""}>
-              {p.image && (
-                <a href={p.href} className="mb-3 block overflow-hidden rounded-lg border border-line transition-opacity hover:opacity-90">
-                  <Image src={p.image} alt={`${p.name} homepage`} width={1280} height={800} sizes="(min-width: 640px) 360px, 100vw" className="h-auto w-full" />
-                </a>
-              )}
-              <div>
-              <h3 className="font-bold">
-                {p.href ? <a href={p.href} className="transition-colors hover:text-accent">{p.name} <span aria-hidden className="font-normal text-mute">↗</span></a> : p.name}
-              </h3>
-              <p className="font-mono text-xs text-mute">{p.stack.join(" · ")}</p>
-              {p.points.map((pt) => (
-                <p key={pt} className="mt-2 text-mute"><Rich text={pt} cls="font-bold text-ink" /></p>
-              ))}
-              </div>
-            </article>
-          ))}
-        </div>
-      </Section>
-
-      <Section id="achievements" title="Achievements">
+      <Section title="Awards">
         <p className="mb-5 text-mute">
           <Rich text={`**${CV.awards.length}** wins and **$${prizes.toLocaleString("en-US")}** in prizes across hackathons and scholarships in ${span}.`} cls="font-bold text-accent" />
         </p>
         <ul className="space-y-4">
           {CV.awards.map((a) => (
-            <li key={a.place + a.event} className="flex gap-3">
-              <span aria-hidden>{a.emoji}</span>
-              <div className="flex-1 sm:flex sm:justify-between sm:gap-4">
-                <div>
-                  <span className="font-bold">{a.place}</span>
-                  {a.project && <> · {a.project}</>}
-                  {a.prize && <span className="font-bold text-accent"> · ${a.prize.toLocaleString("en-US")}</span>}
-                  <p className="text-mute">{a.event}{a.by ? ` · ${a.by}` : ""}</p>
-                </div>
-                <p className="font-mono text-xs text-mute sm:pt-1">{a.date}</p>
+            <li key={a.place + a.event} className="sm:flex sm:justify-between sm:gap-4">
+              <div>
+                <span className="font-bold">{a.place}</span>
+                {a.project && <> · {a.project}</>}
+                {a.prize && <span className="font-bold text-accent"> · ${a.prize.toLocaleString("en-US")}</span>}
+                <p className="text-mute">{a.event}{a.by ? ` · ${a.by}` : ""}</p>
               </div>
+              <p className="font-mono text-xs text-mute sm:pt-1">{a.date}</p>
             </li>
           ))}
         </ul>
       </Section>
-
-      {gh && <Activity gh={gh} />}
 
       <Section title="Education">
         <Roles roles={CV.education} />
       </Section>
 
       <Section title="Skills">
-        <dl className="space-y-4">
+        <dl className="space-y-2">
           {CV.skills.map(([cat, items]) => (
-            <div key={cat} className="sm:flex sm:items-start sm:gap-4">
-              <dt className="mb-2 font-bold sm:mb-0 sm:w-32 sm:shrink-0 sm:pt-1">{cat}</dt>
-              <dd>
-                <ul className="flex flex-wrap gap-2">
-                  {items.map((s) => (
-                    // Light tile in both themes, so dark logos (Next.js, Rust, Flask) stay visible in dark mode.
-                    <li key={s.name} className="flex items-center gap-2 rounded-md border border-line py-1 pr-2.5 pl-1 font-mono text-xs">
-                      <span className="grid size-6 place-items-center rounded bg-tile">
-                        <Image src={s.icon} alt="" width={16} height={16} className="size-4 object-contain" />
-                      </span>
-                      {s.name}
-                    </li>
-                  ))}
-                </ul>
-              </dd>
+            <div key={cat} className="sm:flex sm:gap-4">
+              <dt className="font-bold sm:w-32 sm:shrink-0">{cat}</dt>
+              <dd className="text-mute">{items.join(", ")}</dd>
             </div>
           ))}
         </dl>
       </Section>
 
-      <footer className="mt-12 border-t border-line pt-4 font-mono text-xs text-mute">
-        v{version} · updated {date}
+      {gh && <Activity gh={gh} />}
+
+      <footer id="contact" className="mt-12 scroll-mt-6 border-t border-line pt-6">
+        <p className="font-mono text-xs text-mute">Contact</p>
+        <a href={`mailto:${email}`} className="mt-3 block break-all text-3xl font-bold tracking-tight transition-colors hover:text-accent sm:text-5xl">{email}</a>
+        <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-1">
+          {CV.links.filter((l) => !l.href.startsWith("mailto:")).map((l) => (
+            <li key={l.href}>
+              <a href={l.href} className={linkCls}>{l.label}</a>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-8 font-mono text-xs text-mute">v{version} · updated {date}</p>
       </footer>
       <AiPulse />
     </main>
   );
 }
+

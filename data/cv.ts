@@ -1,22 +1,21 @@
 export type Link = { label: string; href: string };
-export type Skill = { name: string; icon: string };
 export type Role = { org: string; title: string; dates: string; place: string; points: string[] };
 export type Project = { name: string; stack: string[]; points: string[]; href?: string; image?: string };
-export type Award = { emoji: string; place: string; project?: string; prize?: number; event: string; by?: string; date: string };
+export type Award = { place: string; project?: string; prize?: number; event: string; by?: string; date: string };
 
 export const CV: {
   name: string;
-  tagline: string;
+  headline: string;
   summary: string;
   links: Link[];
   education: Role[];
   experience: Role[];
   projects: Project[];
   awards: Award[];
-  skills: [category: string, items: Skill[]][];
+  skills: [category: string, items: string[]][];
 } = {
   name: "Theola Aristo Putra Niomba",
-  tagline: "Fullstack & smart contract engineer building production DeFi on Solana.",
+  headline: "I build production DeFi on Solana.",
   summary:
     "Computer Science student (GPA 3.85) building production DeFi on Solana: two mainnet protocols serving 150+ users with up to $50k AUM. Lab assistant teaching 300+ students per semester. Expanding into AI/ML.",
   links: [
@@ -128,52 +127,16 @@ export const CV: {
     },
   ],
   awards: [
-    { emoji: "🥈", place: "Second Winner", project: "Octora", prize: 2500, event: "Indonesia National Campus Hackathon", date: "May 2026" },
-    { emoji: "🏅", place: "Fourth Winner", project: "Panora", prize: 500, event: "Indonesia National Campus Hackathon", date: "May 2026" },
-    { emoji: "🏆", place: "Second Public Favorite", prize: 400, event: "Startup Village 2026", by: "Superteam Indonesia", date: "Apr 2026" },
-    { emoji: "🎓", place: "Scholarship Awardee", event: "Mancer Web3 Scholarship", by: "Mancer Work", date: "Apr 2026" },
-    { emoji: "⭐", place: "Mentor's Favorite", event: "Kelas Rutin", by: "Blockdev.id", date: "Nov 2025" },
+    { place: "Second Winner", project: "Octora", prize: 2500, event: "Indonesia National Campus Hackathon", date: "May 2026" },
+    { place: "Fourth Winner", project: "Panora", prize: 500, event: "Indonesia National Campus Hackathon", date: "May 2026" },
+    { place: "Second Public Favorite", prize: 400, event: "Startup Village 2026", by: "Superteam Indonesia", date: "Apr 2026" },
+    { place: "Scholarship Awardee", event: "Mancer Web3 Scholarship", by: "Mancer Work", date: "Apr 2026" },
+    { place: "Mentor's Favorite", event: "Kelas Rutin", by: "Blockdev.id", date: "Nov 2025" },
   ],
   skills: [
-    ["Languages", [
-      { name: "TypeScript", icon: "/skills/typescript.svg" },
-      { name: "JavaScript", icon: "/skills/javascript.svg" },
-      { name: "Python", icon: "/skills/python.svg" },
-      { name: "Go", icon: "/skills/go.svg" },
-      { name: "Rust", icon: "/skills/rust.svg" },
-      { name: "Solidity", icon: "/skills/solidity.svg" },
-      { name: "C#", icon: "/skills/csharp.svg" },
-      { name: "Kotlin", icon: "/skills/kotlin.svg" },
-    ]],
-    ["Frameworks", [
-      { name: "React", icon: "/skills/react.svg" },
-      { name: "Next.js", icon: "/skills/nextjs.svg" },
-      { name: "Tailwind", icon: "/skills/tailwind.svg" },
-      { name: "Vue.js", icon: "/skills/vue.svg" },
-      { name: "Svelte", icon: "/skills/svelte.svg" },
-      { name: "Gin", icon: "/skills/gin.svg" },
-      { name: "Flask", icon: "/skills/flask.svg" },
-      { name: "Laravel", icon: "/skills/laravel.svg" },
-      { name: "GraphQL", icon: "/skills/graphql.svg" },
-    ]],
-    ["Data & DevOps", [
-      { name: "PostgreSQL", icon: "/skills/postgresql.svg" },
-      { name: "MySQL", icon: "/skills/mysql.svg" },
-      { name: "Redis", icon: "/skills/redis.svg" },
-      { name: "Firebase", icon: "/skills/firebase.svg" },
-      { name: "Docker", icon: "/skills/docker.svg" },
-      { name: "Kubernetes", icon: "/skills/kubernetes.svg" },
-      { name: "Git", icon: "/skills/git.svg" },
-      { name: "Linux", icon: "/skills/linux.svg" },
-    ]],
-    ["Web3", [
-      { name: "Solana", icon: "/skills/solana.svg" },
-      { name: "Anchor", icon: "/skills/anchor.png" },
-      { name: "Meteora", icon: "/skills/meteora.svg" },
-      { name: "Jupiter", icon: "/skills/jupiter.svg" },
-      { name: "Phoenix", icon: "/skills/phoenix.png" },
-      { name: "Foundry", icon: "/skills/foundry.png" },
-      { name: "OpenZeppelin", icon: "/skills/openzeppelin.svg" },
-    ]],
+    ["Languages", ["TypeScript", "JavaScript", "Python", "Go", "Rust", "Solidity", "C#", "Kotlin"]],
+    ["Frameworks", ["React", "Next.js", "Tailwind", "Vue.js", "Svelte", "Gin", "Flask", "Laravel", "GraphQL"]],
+    ["Data & DevOps", ["PostgreSQL", "MySQL", "Redis", "Firebase", "Docker", "Kubernetes", "Git", "Linux"]],
+    ["Web3", ["Solana", "Anchor", "Meteora", "Jupiter", "Phoenix", "Foundry", "OpenZeppelin"]],
   ],
 };
