@@ -16,6 +16,7 @@ export const CHANGELOG: Release[] = [
       "Projects are now a numbered list you can scan from top to bottom.",
       "I cut the stats row, the skill icons and the repo list, and kept the words.",
       "The page ends with my email, so reaching me takes one click.",
+      "The headline now types out the kinds of things I build, one after another.",
     ],
   },
   {

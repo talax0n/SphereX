@@ -4,6 +4,7 @@ import { CV, type Role } from "@/data/cv";
 import { CHANGELOG } from "@/data/changelog";
 import { AiPulse } from "./ai-pulse";
 import { AsciiShape } from "./ascii-shape";
+import { Headline } from "./headline";
 import { Section } from "./section";
 import { getGitHub, timeAgo, type Day, type GitHub } from "@/data/github";
 
@@ -147,8 +148,8 @@ export default async function Home() {
       </div>
 
       <header className="mt-14 flex flex-col-reverse gap-6 sm:mt-20 lg:flex-row lg:items-center lg:justify-between lg:gap-10">
-        <div>
-          <h1 className="text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">{CV.headline}</h1>
+        <div className="@container min-w-0 lg:flex-1">
+          <Headline phrases={CV.builds} />
           <p className="mt-6 max-w-[36rem] text-lg leading-snug text-mute sm:text-xl">
             Fullstack &amp; smart contract engineer. Two mainnet protocols, 150+ users, up to $50k AUM. {CV.awards.length} hackathon and scholarship wins and ${prizes.toLocaleString("en-US")} in prizes.
           </p>

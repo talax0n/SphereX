@@ -5,7 +5,8 @@ export type Award = { place: string; project?: string; prize?: number; event: st
 
 export const CV: {
   name: string;
-  headline: string;
+  /** each one completes "I build ..." in the hero, shown in turn */
+  builds: string[];
   summary: string;
   links: Link[];
   education: Role[];
@@ -15,7 +16,7 @@ export const CV: {
   skills: [category: string, items: string[]][];
 } = {
   name: "Theola Aristo Putra Niomba",
-  headline: "I build production DeFi on Solana.",
+  builds: ["DeFi on Solana", "full stack apps", "backend systems", "DevOps pipelines"],
   summary:
     "Computer Science student (GPA 3.85) building production DeFi on Solana: two mainnet protocols serving 150+ users with up to $50k AUM. Lab assistant teaching 300+ students per semester. Expanding into AI/ML.",
   links: [
