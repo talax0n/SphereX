@@ -1,6 +1,31 @@
 export type Link = { label: string; href: string };
 export type Role = { org: string; title: string; dates: string; place: string; points: string[] };
-export type Project = { name: string; stack: string[]; points: string[]; href?: string; image?: string };
+/** A screenshot is 1280x800, or 450x1000 when `tall` (a phone screen). */
+export type Shot = { src: string; alt: string; tall?: true };
+/** Every logo a project can list. A stack entry must be one of these names. */
+export const TECH = {
+  Rust: "/tech/rust.svg",
+  Anchor: "/tech/anchor.png",
+  TypeScript: "/tech/typescript.svg",
+  Kotlin: "/tech/kotlin.svg",
+  "Next.js": "/tech/nextjs.svg",
+  React: "/tech/react.svg",
+  "Node.js": "/tech/nodejs.svg",
+  NestJS: "/tech/nestjs.svg",
+  Fastify: "/tech/fastify.svg",
+  Prisma: "/tech/prisma.svg",
+  Electron: "/tech/electron.svg",
+  Playwright: "/tech/playwright.svg",
+  "Jetpack Compose": "/tech/jetpackcompose.svg",
+  Supabase: "/tech/supabase.svg",
+  PostgreSQL: "/tech/postgresql.svg",
+  Turborepo: "/tech/turborepo.svg",
+  Docker: "/tech/docker.svg",
+  Kubernetes: "/tech/kubernetes.svg",
+  Solana: "/tech/solana.svg",
+} as const;
+export type Tech = keyof typeof TECH;
+export type Project = { name: string; stack: Tech[]; points: string[]; href?: string; shots: Shot[] };
 export type Award = { place: string; project?: string; prize?: number; event: string; by?: string; date: string };
 
 export const CV: {
@@ -78,21 +103,32 @@ export const CV: {
     {
       name: "Hedgin",
       href: "https://hedgin.xyz/",
-      image: "/projects/hedgin.png",
-      stack: ["Rust", "Anchor", "Next.js", "PostgreSQL", "Telegram Bot"],
+      shots: [
+        { src: "/projects/hedgin.png", alt: "Hedgin landing page" },
+        { src: "/projects/hedgin-vault.png", alt: "A vault page with its share price chart and holdings" },
+        { src: "/projects/hedgin-liquidity.png", alt: "Manager screen for opening a Meteora liquidity position" },
+        { src: "/projects/hedgin-perps.png", alt: "Manager screen for trading Phoenix perps" },
+      ],
+      stack: ["Rust", "Anchor", "Next.js", "PostgreSQL"],
       points: ["On-chain vaults with share accounting, 4h NAV epochs, admin dashboard, and manager Telegram bot"],
     },
     {
       name: "SolHedge",
-      image: "/projects/solhedge.png",
+      shots: [
+        { src: "/projects/solhedge.png", alt: "SolHedge landing page" },
+        { src: "/projects/solhedge-pools.png", alt: "Pool list with fees, volume and yield" },
+        { src: "/projects/solhedge-deposit.png", alt: "Deposit screen for one pool" },
+      ],
       stack: ["TypeScript", "Node.js", "PostgreSQL", "Kubernetes", "Solana"],
       href: "https://solhedge.xyz/",
       points: ["Delta-hedged LP automation: market watcher, hedge strategy, and execution services over a Postgres job queue"],
     },
     {
       name: "Octora",
-      image: "/projects/octora.png",
-      stack: ["TypeScript", "React", "Fastify", "Prisma", "Circom"],
+      shots: [
+        { src: "/projects/octora.png", alt: "Octora landing page" },
+      ],
+      stack: ["TypeScript", "React", "Fastify", "Prisma"],
       href: "https://www.octora.xyz/",
       points: [
         "Private execution layer for Meteora LP: routes intents through privacy relays (MagicBlock) to hide origin wallets from copy-trade bots",
@@ -100,29 +136,42 @@ export const CV: {
     },
     {
       name: "XFlare",
-      image: "/projects/xflare.png",
-      stack: ["Next.js", "NestJS", "Turborepo", "Zustand", "Docker"],
+      shots: [
+        { src: "/projects/xflare.png", alt: "XFlare landing page" },
+      ],
+      stack: ["Next.js", "NestJS", "Turborepo", "Docker"],
       href: "https://xflare.app/",
       points: ["Crypto trading platform with portfolio dashboard, referral tree, and points system"],
     },
     {
       name: "Ether",
-      image: "/projects/ether.png",
+      shots: [
+        { src: "/projects/ether.png", alt: "Ether overview" },
+        { src: "/projects/ether-swipe.png", alt: "Swiping through possible teammates", tall: true },
+        { src: "/projects/ether-match.png", alt: "A match with a team", tall: true },
+        { src: "/projects/ether-profile.png", alt: "Profile with level, XP and badges", tall: true },
+      ],
       stack: ["Kotlin", "Jetpack Compose", "Supabase", "PostgreSQL"],
       href: "https://github.com/talax0n/Ether",
       points: ["Swipe-to-match Android app for forming hackathon teams: per-competition decks, mutual matches auto-form teams, outcome-based XP and badges"],
     },
     {
       name: "Aeron",
-      image: "/projects/aeron.png",
+      shots: [
+        { src: "/projects/aeron.png", alt: "Aeron overview" },
+        { src: "/projects/aeron-pipeline.png", alt: "Grading pipeline with grader, blind judge and council" },
+        { src: "/projects/aeron-grading.png", alt: "Marks grid for a class with per-criterion scores" },
+      ],
       stack: ["TypeScript", "Electron", "React", "Playwright", "Docker"],
       href: "https://github.com/talax0n/aeron-releases",
       points: ["Desktop grading pipeline for lab corrections: sandboxed test runs, two LLMs grade blind and a council settles disputes, then marks autofill the grid after human review"],
     },
     {
       name: "Bilinkers",
-      image: "/projects/bilinkers.png",
-      stack: ["Rust", "Chrome DevTools Protocol", "Codex CLI"],
+      shots: [
+        { src: "/projects/bilinkers.png", alt: "Bilinkers overview" },
+      ],
+      stack: ["Rust"],
       href: "https://github.com/talax0n/bilinkers",
       points: ["Desktop bot that drives a browser through LMS courses, detecting each page type and completing exercises, with an LLM for open questions"],
     },

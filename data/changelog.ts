@@ -17,6 +17,8 @@ export const CHANGELOG: Release[] = [
       "I cut the stats row, the skill icons and the repo list, and kept the words.",
       "The page ends with my email, so reaching me takes one click.",
       "The headline now types out the kinds of things I build, one after another.",
+      "Each project now shows screens from inside the app, not only its front page.",
+      "Each project lists its tools as a pile of logos that spreads out when you hover it.",
     ],
   },
   {

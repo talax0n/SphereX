@@ -6,6 +6,7 @@
   --mute: #7a6a5c;
   --line: #eadfc4;
   --accent: #e58c2e;
+  --tile: #ffffff;
   --green: #3c6a12;
   --badge: #3b2c22;
   --badge-ink: #fff7e1;
@@ -19,6 +20,7 @@
     --mute: #a8998a;
     --line: #3a2f26;
     --accent: #e58c2e;
+    --tile: #f3e9d2;
     --green: #a8e063;
     --badge: #f3e9d2;
     --badge-ink: #1c1612;
@@ -34,6 +36,7 @@
   --color-mute: var(--mute);
   --color-line: var(--line);
   --color-accent: var(--accent);
+  --color-tile: var(--tile);
   --color-green: var(--green);
   --color-badge: var(--badge);
   --color-badge-ink: var(--badge-ink);

@@ -1,11 +1,12 @@
-import Image from "next/image";
 import type { ReactNode } from "react";
-import { CV, type Role } from "@/data/cv";
+import Image from "next/image";
+import { CV, TECH, type Role } from "@/data/cv";
 import { CHANGELOG } from "@/data/changelog";
 import { AiPulse } from "./ai-pulse";
 import { AsciiShape } from "./ascii-shape";
 import { Headline } from "./headline";
 import { Section } from "./section";
+import { Shots } from "./shots";
 import { getGitHub, timeAgo, type Day, type GitHub } from "@/data/github";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -160,12 +161,7 @@ export default async function Home() {
       <Section id="work" title="Work">
         <ol>
           {CV.projects.map((p, i) => (
-            <li key={p.name} className="flex flex-col gap-4 border-t border-line py-6 first:border-t-0 first:pt-0 sm:flex-row-reverse sm:justify-between sm:gap-6">
-              {p.image && (
-                <a href={p.href} className="block overflow-hidden rounded-lg border border-line transition-opacity hover:opacity-90 sm:w-44 sm:shrink-0 lg:w-52">
-                  <Image src={p.image} alt={`${p.name} homepage`} width={1280} height={800} sizes="(min-width: 1024px) 208px, (min-width: 640px) 176px, 100vw" className="h-auto w-full" />
-                </a>
-              )}
+            <li key={p.name} className="border-t border-line py-6 first:border-t-0 first:pt-0">
               <div className="flex gap-4">
                 <span className="pt-0.5 font-mono text-xs text-mute">{String(i + 1).padStart(2, "0")}</span>
                 <div>
@@ -175,9 +171,21 @@ export default async function Home() {
                   {p.points.map((pt) => (
                     <p key={pt} className="mt-1 text-mute"><Rich text={pt} cls="font-bold text-ink" /></p>
                   ))}
-                  <p className="mt-2 font-mono text-xs text-mute">{p.stack.join(" · ")}</p>
+                  {/* Logos overlap in a pile and spread out with their names on hover, or on focus for touch and keyboard. */}
+                  <ul tabIndex={0} aria-label={`Built with ${p.stack.join(", ")}`} className="group mt-3 flex w-fit flex-wrap gap-y-1 rounded-full">
+                    {p.stack.map((t) => (
+                      <li key={t} className="-ml-2 flex items-center rounded-full border border-line bg-bg p-0.5 transition-[margin] duration-300 first:ml-0 group-hover:ml-1.5 group-hover:first:ml-0 group-focus:ml-1.5 group-focus:first:ml-0">
+                        {/* Light tile in both themes, so dark logos (Next.js, Rust) stay visible in dark mode. */}
+                        <span className="grid size-6 place-items-center rounded-full bg-tile">
+                          <Image src={TECH[t]} alt="" width={14} height={14} className="size-3.5 object-contain" />
+                        </span>
+                        <span className="max-w-0 overflow-hidden whitespace-nowrap font-mono text-xs text-mute opacity-0 transition-all duration-300 group-hover:max-w-40 group-hover:px-2 group-hover:opacity-100 group-focus:max-w-40 group-focus:px-2 group-focus:opacity-100">{t}</span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               </div>
+              <Shots shots={p.shots} />
             </li>
           ))}
         </ol>
